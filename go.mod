@@ -1,4 +1,4 @@
-module github.com/mpppk/cli-template
+module github.com/mpppk/messagen
 
 go 1.12
 

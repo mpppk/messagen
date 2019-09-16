@@ -13,5 +13,5 @@ RUN make build
 FROM alpine:3.10
 RUN mkdir /lib64
 RUN ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
-COPY --from=builder /src/cli-template /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/cli-template"]
+COPY --from=builder /src/messagen /usr/local/bin
+ENTRYPOINT ["/usr/local/bin/messagen"]

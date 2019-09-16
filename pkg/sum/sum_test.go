@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mpppk/cli-template/pkg/sum"
-	"github.com/mpppk/cli-template/pkg/util"
+	"github.com/mpppk/messagen/pkg/sum"
+	"github.com/mpppk/messagen/pkg/util"
 )
 
 func ExampleSum() {

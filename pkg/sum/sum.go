@@ -2,7 +2,7 @@
 package sum
 
 import (
-	"github.com/mpppk/cli-template/pkg/util"
+	"github.com/mpppk/messagen/pkg/util"
 	"math"
 )
 

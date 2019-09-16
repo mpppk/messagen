@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mpppk/cli-template/internal/option"
+	"github.com/mpppk/messagen/internal/option"
 	"github.com/spf13/afero"
 
 	"github.com/mitchellh/go-homedir"
@@ -26,15 +26,15 @@ func newToggleFlag() *option.BoolFlag {
 
 func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use:   "cli-template",
-		Short: "cli-template",
+		Use:   "messagen",
+		Short: "messagen",
 	}
 
 	configFlag := &option.StringFlag{
 		Flag: &option.Flag{
 			Name:         "config",
 			IsPersistent: true,
-			Usage:        "config file (default is $HOME/.cli-template.yaml)",
+			Usage:        "config file (default is $HOME/.messagen.yaml)",
 		},
 	}
 
@@ -85,9 +85,9 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".cli-template" (without extension).
+		// Search config in home directory with name ".messagen" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".cli-template")
+		viper.SetConfigName(".messagen")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
