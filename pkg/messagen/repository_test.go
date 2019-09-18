@@ -7,7 +7,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		m DefinitionMap
 	}
 	type args struct {
-		id DefinitionID
+		id DefinitionType
 	}
 
 	tests := []struct {
@@ -21,17 +21,19 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			name: "no variable in template",
 			fields: fields{
 				m: DefinitionMap{
-					"test": &Definition{
-						RawDefinition: RawDefinition{
-							ID:             "test",
-							AllowDuplicate: false,
-						},
-						Templates: NewTemplates([]*Template{newTemplateOrPanic("aaa")}),
-					},
+					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:           "Test",
+						RawTemplates:   []RawTemplate{"aaa"},
+						Labels:         Labels{},
+						Requires:       Labels{},
+						Alias:          Alias{},
+						AllowDuplicate: false,
+						Weight:         0,
+					})},
 				},
 			},
 			args: args{
-				id: "test",
+				id: "Test",
 			},
 			want:    "aaa",
 			wantErr: false,
@@ -40,24 +42,28 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			name: "one variable in template",
 			fields: fields{
 				m: DefinitionMap{
-					"test": &Definition{
-						RawDefinition: RawDefinition{
-							ID:             "test",
-							AllowDuplicate: false,
-						},
-						Templates: NewTemplates([]*Template{newTemplateOrPanic("aaa{{.NestTest}}ccc")}),
-					},
-					"NestTest": &Definition{
-						RawDefinition: RawDefinition{
-							ID:             "NestTest",
-							AllowDuplicate: false,
-						},
-						Templates: NewTemplates([]*Template{newTemplateOrPanic("bbb")}),
-					},
+					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:           "Test",
+						RawTemplates:   []RawTemplate{"aaa{{.NestTest}}ccc"},
+						Labels:         Labels{},
+						Requires:       Labels{},
+						Alias:          Alias{},
+						AllowDuplicate: false,
+						Weight:         0,
+					})},
+					"NestTest": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:           "NestTest",
+						RawTemplates:   []RawTemplate{"bbb"},
+						Labels:         Labels{},
+						Requires:       Labels{},
+						Alias:          Alias{},
+						AllowDuplicate: false,
+						Weight:         0,
+					})},
 				},
 			},
 			args: args{
-				id: "test",
+				id: "Test",
 			},
 			want:    "aaabbbccc",
 			wantErr: false,

@@ -11,17 +11,17 @@ import (
 
 type RawTemplate string
 
-func (r RawTemplate) extractDefRefIDFromRawTemplate() (defRefIDList []DefinitionID) {
+func (r RawTemplate) extractDefRefIDFromRawTemplate() (defRefIDList []DefinitionType) {
 	re := regexp.MustCompile(`\{\{\.(.*?)\}\}`)
 	for _, match := range re.FindAllStringSubmatch(string(r), -1) {
-		defRefIDList = append(defRefIDList, DefinitionID(match[1]))
+		defRefIDList = append(defRefIDList, DefinitionType(match[1]))
 	}
 	return
 }
 
 type Template struct {
 	Raw     RawTemplate
-	Depends []DefinitionID
+	Depends []DefinitionType
 	tmpl    *template.Template
 }
 
@@ -38,26 +38,26 @@ func NewTemplate(rawTemplate RawTemplate) (*Template, error) {
 	}, err
 }
 
-func newTemplateOrPanic(rawTemplate RawTemplate) *Template {
-	t, err := NewTemplate(rawTemplate)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-func (r *Template) Execute(m GeneratedMessageMap) (GeneratedMessage, error) {
+func (r *Template) Execute(m Labels) (Message, error) {
 	buf := &bytes.Buffer{}
 	if err := r.tmpl.Execute(buf, m); err != nil {
 		return "", xerrors.Errorf("failed to execute template. template:%s  m:%#v : %w", r.Raw, m, err)
 	}
-	return GeneratedMessage(buf.String()), nil
+	return Message(buf.String()), nil
 }
 
 type Templates []*Template
 
-func NewTemplates(slice []*Template) Templates {
-	return Templates(slice)
+func NewTemplates(rawTemplates []RawTemplate) (Templates, error) {
+	var templates []*Template
+	for _, rawTemplate := range rawTemplates {
+		t, err := NewTemplate(rawTemplate)
+		if err != nil {
+			return nil, xerrors.Errorf("failed to create Templates: %w", err)
+		}
+		templates = append(templates, t)
+	}
+	return Templates(templates), nil
 }
 
 func (t Templates) GetRandom() *Template {

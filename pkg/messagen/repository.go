@@ -1,20 +1,20 @@
 package messagen
 
 import (
-	"fmt"
+	"math/rand"
 
 	"golang.org/x/xerrors"
 )
 
-type DefinitionMap map[DefinitionID]*Definition
-type GeneratedMessage string
-type GeneratedMessageMap map[string]GeneratedMessage
+type DefinitionMap map[DefinitionType][]*Definition
+type Message string
+type Labels map[string]Message
 
-func (g GeneratedMessageMap) Set(id DefinitionID, message GeneratedMessage) {
+func (g Labels) Set(id DefinitionType, message Message) {
 	g[string(id)] = message
 }
 
-func (g GeneratedMessageMap) Get(id DefinitionID) (GeneratedMessage, bool) {
+func (g Labels) Get(id DefinitionType) (Message, bool) {
 	msg, ok := g[string(id)]
 	return msg, ok
 }
@@ -32,51 +32,62 @@ func NewDefinitionRepository() *DefinitionRepository {
 	}
 }
 
-func (d *DefinitionRepository) Get(defID DefinitionID) (*Definition, bool) {
-	def, ok := d.m[defID]
-	return def, ok
-}
-
-func (d *DefinitionRepository) Add(def *Definition) error {
-	if _, ok := d.m[def.ID]; ok {
-		return xerrors.Errorf("definition already exist. ID:%s", def.ID)
-	}
-	d.m[def.ID] = def
-	return nil
-}
-
-func (d *DefinitionRepository) Generate(id DefinitionID) (string, error) {
-	messageMap := GeneratedMessageMap{}
-	def, ok := d.Get(id)
+func (d *DefinitionRepository) List(defType DefinitionType) (defs []*Definition) {
+	defs, ok := d.m[defType]
 	if !ok {
-		return "", fmt.Errorf("failed to get Definition. ID: %s", id)
+		return []*Definition{}
 	}
-	msg, err := generate(def, messageMap, d)
+	return defs
+}
+
+func (d *DefinitionRepository) pickRandom(defType DefinitionType) (*Definition, bool) {
+	defs, ok := d.m[defType]
+	if !ok {
+		return nil, false
+	}
+	return defs[rand.Intn(len(defs))], true
+}
+
+func (d *DefinitionRepository) Add(def *Definition) {
+	if defs, ok := d.m[def.Type]; ok {
+		d.m[def.Type] = append(defs, def)
+		return
+	}
+	d.m[def.Type] = []*Definition{def}
+	return
+}
+
+func (d *DefinitionRepository) Generate(defType DefinitionType) (string, error) {
+	currentLabels := Labels{}
+	def, ok := d.pickRandom(defType)
+	if !ok {
+		return "", xerrors.Errorf("failed to generate message. Root Definition type not found: %s", defType)
+	}
+
+	msg, err := generate(def, currentLabels, d)
 	return string(msg), err
 }
 
-func generate(def *Definition, m GeneratedMessageMap, repo *DefinitionRepository) (GeneratedMessage, error) {
+func generate(def *Definition, currentLabels Labels, repo *DefinitionRepository) (Message, error) {
 	defTemplate := def.Templates.GetRandom()
 	if len(defTemplate.Depends) == 0 {
-		return GeneratedMessage(defTemplate.Raw), nil
+		return Message(defTemplate.Raw), nil
 	}
 
-	for _, defID := range defTemplate.Depends {
-		if _, ok := m.Get(defID); ok {
+	for _, defType := range defTemplate.Depends {
+		if _, ok := currentLabels.Get(defType); ok {
 			continue
 		}
 
-		newDef, ok := repo.Get(defID)
-		if !ok {
-			return "", xerrors.Errorf("failed to get Definition. ID:%s", defID)
+		for _, candidateDef := range repo.List(defType) {
+			if ok, _ := def.CanBePicked(currentLabels); ok {
+				message, err := generate(candidateDef, currentLabels, repo)
+				if err != nil {
+					return "", err
+				}
+				currentLabels.Set(defType, message)
+			}
 		}
-
-		s, err := generate(newDef, m, repo)
-		if err != nil {
-			return "", err
-		}
-
-		m.Set(defID, s)
 	}
-	return defTemplate.Execute(m)
+	return defTemplate.Execute(currentLabels)
 }

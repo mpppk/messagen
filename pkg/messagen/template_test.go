@@ -6,16 +6,24 @@ import (
 	"text/template"
 )
 
+func newTemplateOrPanic(rawTemplate RawTemplate) *Template {
+	t, err := NewTemplate(rawTemplate)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
 func TestRawTemplate_extractDefRefIDFromRawTemplate(t *testing.T) {
 	tests := []struct {
 		name             string
 		r                RawTemplate
-		wantDefRefIDList []DefinitionID
+		wantDefRefIDList []DefinitionType
 	}{
 		{
 			name:             "should extract RefID",
 			r:                "{{.id1}}test{{.id2}}",
-			wantDefRefIDList: []DefinitionID{"id1", "id2"},
+			wantDefRefIDList: []DefinitionType{"id1", "id2"},
 		},
 	}
 	for _, tt := range tests {
@@ -38,13 +46,13 @@ func TestNewTemplate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "should have valid depends ref ID",
+			name: "should have valid depends ref Type",
 			args: args{
 				rawTemplate: "{{.id1}}test{{.id2}}",
 			},
 			want: &Template{
 				Raw:     "{{.id1}}test{{.id2}}",
-				Depends: []DefinitionID{"id1", "id2"},
+				Depends: []DefinitionType{"id1", "id2"},
 			},
 		},
 	}
@@ -69,30 +77,35 @@ func TestNewTemplate(t *testing.T) {
 }
 
 func TestNewTemplates(t *testing.T) {
-	templates := []*Template{
-		newTemplateOrPanic("{{.id1}}"),
-		newTemplateOrPanic("{{.id2}}"),
-	}
-
 	type args struct {
-		slice []*Template
+		rawTemplates []RawTemplate
 	}
 	tests := []struct {
-		name string
-		args args
-		want Templates
+		name    string
+		args    args
+		want    Templates
+		wantErr bool
 	}{
 		{
-			name: "should convert template slice to Templates",
+			name: "should convert template rawTemplates to Templates",
 			args: args{
-				slice: templates,
+				rawTemplates: []RawTemplate{"{{.id1}}", "{{.id2}}"},
 			},
-			want: Templates(templates),
+			want: Templates{
+				newTemplateOrPanic("{{.id1}}"),
+				newTemplateOrPanic("{{.id2}}"),
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewTemplates(tt.args.slice); !reflect.DeepEqual(got, tt.want) {
+			got, err := NewTemplates(tt.args.rawTemplates)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewTemplate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewTemplates() = %v, want %v", got, tt.want)
 			}
 		})
@@ -102,17 +115,17 @@ func TestNewTemplates(t *testing.T) {
 func TestTemplate_Execute(t *testing.T) {
 	type fields struct {
 		Raw     RawTemplate
-		Depends []DefinitionID
+		Depends []DefinitionType
 		tmpl    *template.Template
 	}
 	type args struct {
-		m GeneratedMessageMap
+		m Labels
 	}
 	tests := []struct {
 		name    string
 		fields  fields
 		args    args
-		want    GeneratedMessage
+		want    Message
 		wantErr bool
 	}{
 		{
@@ -121,7 +134,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Raw: "aaa{{.id1}}ccc",
 			},
 			args: args{
-				m: GeneratedMessageMap{"id1": "bbb"},
+				m: Labels{"id1": "bbb"},
 			},
 			want:    "aaabbbccc",
 			wantErr: false,
@@ -133,11 +146,6 @@ func TestTemplate_Execute(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to create new template: error = %v", err)
 			}
-			//{
-			//	Raw:     tt.fields.Raw,
-			//	Depends: tt.fields.Depends,
-			//	tmpl:    tt.fields.tmpl,
-			//}
 			got, err := r.Execute(tt.args.m)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Template.Execute() error = %v, wantErr %v", err, tt.wantErr)
