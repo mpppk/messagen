@@ -50,6 +50,42 @@ func (c *ConstraintValue) Match(msg Message) bool {
 }
 
 type RawConstraints map[RawConstraintKey]RawConstraintValue
+
+type Constraint struct {
+	key   *ConstraintKey
+	value *ConstraintValue
+}
+
+func NewConstraint(rawKey RawConstraintKey, rawValue RawConstraintValue) (*Constraint, error) {
+	key, err := rawKey.Parse()
+	if err != nil {
+		return nil, xerrors.Errorf("failed to create Constraint: %w", key)
+	}
+
+	if ok, _ := key.IsValid(); !ok {
+		return nil, xerrors.Errorf("invalid constraints key is found(%s)", key)
+	}
+
+	value, err := rawValue.Parse(key.HasRegExpValue)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to create Constraint: %w", key)
+	}
+	return &Constraint{key: key, value: value}, nil
+}
+
+func (c *Constraint) IsSatisfied(state State) bool {
+	msg, ok := state.Get(c.key.DefinitionType)
+	if !ok && !c.key.IsAllowedToNotExist {
+		return false
+	}
+
+	if ok := c.value.Match(msg); !ok {
+		return false
+	}
+
+	return true
+}
+
 type Constraints struct {
 	raw    RawConstraints
 	defMap map[DefinitionType]RawConstraintKey
@@ -103,37 +139,16 @@ func (c *Constraints) ListUnsatisfied(state State) (*Constraints, error) {
 	}
 
 	for rkey, rvalue := range c.raw {
-		key, err := rkey.Parse()
+		constraint, err := NewConstraint(rkey, rvalue)
 		if err != nil {
-			return unsatisfiedConstraints, xerrors.Errorf("failed to parse raw constraints key: %w", err)
+			return nil, xerrors.Errorf("error occurred in ListUnsatisfied: %w", err)
 		}
 
-		if ok, reason := key.IsValid(); !ok {
-			return unsatisfiedConstraints,
-				xerrors.Errorf("invalid constraints key is found(%s). reason: %s", key, reason)
-		}
-
-		value, err := rvalue.Parse(key.HasRegExpValue)
-		if err != nil {
-			return unsatisfiedConstraints, xerrors.Errorf("error occurred in ListUnsatisfied: %w", err)
-		}
-
-		msg, ok := state.Get(key.DefinitionType)
-		if !ok && !key.IsAllowedToNotExist {
+		if !constraint.IsSatisfied(state) {
 			if err := unsatisfiedConstraints.Set(rkey, rvalue); err != nil {
 				return unsatisfiedConstraints, xerrors.Errorf("failed to set constraint key: %w", err)
 			}
-			continue
 		}
-
-		if ok := value.Match(msg); !ok {
-			if err := unsatisfiedConstraints.Set(rkey, rvalue); err != nil {
-				return unsatisfiedConstraints, xerrors.Errorf("failed to set constraint key: %w", err)
-			}
-			continue
-		}
-
-		// TODO: Add more checks
 	}
 	return unsatisfiedConstraints, nil
 }
