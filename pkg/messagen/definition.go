@@ -28,6 +28,14 @@ func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
 		return nil, xerrors.Errorf("failed to create Definition: %w", err)
 	}
 
+	if rawDefinition.Constraints == nil {
+		constraints, err := NewConstraints(nil)
+		if err != nil {
+			return nil, xerrors.Errorf("failed to set empty constraints to definition: %w", err)
+		}
+		rawDefinition.Constraints = constraints
+	}
+
 	return &Definition{
 		RawDefinition: rawDefinition,
 		Templates:     templates,

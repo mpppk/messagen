@@ -73,6 +73,7 @@ func (l *ConstraintKey) update(rlr RawConstraintKeyRune) error {
 		l.HasRegExpValue = true
 	case '+':
 		l.WillAddValue = true
+		l.IsAllowedToNotExist = true
 	default:
 		return xerrors.Errorf("unknown special constraint rune: %s", rlr)
 	}
@@ -83,6 +84,11 @@ func (l *ConstraintKey) IsValid() (bool, string) {
 	if l.HasRegExpValue && l.WillAddValue {
 		return false, "/ and + are exclusive"
 	}
-	// TODO: Add more validations
+	if l.HasRegExpValue && l.MustNotExist {
+		return false, "/ and ! are exclusive"
+	}
+	if l.MustNotExist && l.IsAllowedToNotExist {
+		return false, "! and ? are exclusive"
+	}
 	return true, ""
 }

@@ -146,7 +146,7 @@ func TestRawConstraintKey_Parse(t *testing.T) {
 				Raw:                 "Test+",
 				DefinitionType:      "Test",
 				HasRegExpValue:      false,
-				IsAllowedToNotExist: false,
+				IsAllowedToNotExist: true,
 				MustNotExist:        false,
 				WillAddValue:        true,
 			},

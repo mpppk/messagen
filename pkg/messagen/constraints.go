@@ -49,6 +49,13 @@ func (c *ConstraintValue) Match(msg Message) bool {
 	return c.Raw.Match(msg)
 }
 
+func (c *ConstraintValue) ToMessage() (Message, error) {
+	if c.IsRegExp {
+		return "", xerrors.Errorf("failed to convert constraint value to message. value is RegExp")
+	}
+	return Message(c.Raw), nil
+}
+
 type RawConstraints map[RawConstraintKey]RawConstraintValue
 
 type Constraint struct {
@@ -75,7 +82,14 @@ func NewConstraint(rawKey RawConstraintKey, rawValue RawConstraintValue) (*Const
 
 func (c *Constraint) IsSatisfied(state State) bool {
 	msg, ok := state.Get(c.key.DefinitionType)
-	if !ok && !c.key.IsAllowedToNotExist {
+
+	// ? operator check
+	if !ok {
+		return c.key.IsAllowedToNotExist
+	}
+
+	// ! operator check
+	if c.key.MustNotExist && ok {
 		return false
 	}
 

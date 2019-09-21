@@ -1,6 +1,7 @@
 package messagen
 
 import (
+	"fmt"
 	"math/rand"
 
 	"golang.org/x/xerrors"
@@ -47,14 +48,16 @@ func (d *DefinitionRepository) Add(def *Definition) {
 	return
 }
 
-func (d *DefinitionRepository) Generate(defType DefinitionType) (string, error) {
-	state := State{}
+func (d *DefinitionRepository) Generate(defType DefinitionType, initialState State) (string, error) {
+	if initialState == nil {
+		initialState = State{}
+	}
 	def, ok := d.pickRandom(defType)
 	if !ok {
 		return "", xerrors.Errorf("failed to generate message. Root Definition type not found: %s", defType)
 	}
 
-	msg, err := generate(def, state, d)
+	msg, err := generate(def, initialState, d)
 	return string(msg), err
 }
 
@@ -69,15 +72,26 @@ func generate(def *Definition, state State, repo *DefinitionRepository) (Message
 			continue
 		}
 
-		for _, candidateDef := range repo.List(defType) {
-			if ok, _ := def.CanBePicked(state); ok {
-				message, err := generate(candidateDef, state, repo)
-				if err != nil {
-					return "", err
-				}
-				state.Set(defType, message)
-			}
+		if _, err := pickDef(defType, state, repo); err != nil {
+			return "", xerrors.Errorf("failed to pick depend definition: %w", err)
 		}
 	}
 	return defTemplate.Execute(state)
+}
+
+func pickDef(defType DefinitionType, state State, repo *DefinitionRepository) (Message, error) {
+	for _, candidateDef := range repo.List(defType) {
+		if ok, _ := candidateDef.CanBePicked(state); ok {
+			message, err := generate(candidateDef, state, repo)
+			if err != nil {
+				return "", err
+			}
+			state.Set(defType, message)
+			if _, err := state.SetByConstraints(candidateDef.Constraints); err != nil {
+				return "", xerrors.Errorf("failed to update state while message generating: %w", err)
+			}
+			return message, nil
+		}
+	}
+	return "", fmt.Errorf("all depend definition are not satisfied constraints: %s", defType)
 }

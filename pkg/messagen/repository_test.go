@@ -7,7 +7,8 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		m DefinitionMap
 	}
 	type args struct {
-		id DefinitionType
+		defType      DefinitionType
+		initialState State
 	}
 
 	tests := []struct {
@@ -22,17 +23,13 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			fields: fields{
 				m: DefinitionMap{
 					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:           "Test",
-						RawTemplates:   []RawTemplate{"aaa"},
-						Constraints:    &Constraints{},
-						Alias:          Alias{},
-						AllowDuplicate: false,
-						Weight:         0,
+						Type:         "Test",
+						RawTemplates: []RawTemplate{"aaa"},
 					})},
 				},
 			},
 			args: args{
-				id: "Test",
+				defType: "Test",
 			},
 			want:    "aaa",
 			wantErr: false,
@@ -42,25 +39,117 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			fields: fields{
 				m: DefinitionMap{
 					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:           "Test",
-						RawTemplates:   []RawTemplate{"aaa{{.NestTest}}ccc"},
-						Constraints:    &Constraints{},
-						Alias:          Alias{},
-						AllowDuplicate: false,
-						Weight:         0,
+						Type:         "Test",
+						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
 					})},
-					"NestTest": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:           "NestTest",
-						RawTemplates:   []RawTemplate{"bbb"},
-						Constraints:    &Constraints{},
-						Alias:          Alias{},
-						AllowDuplicate: false,
-						Weight:         0,
-					})},
+					"NestTest": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"bbb"},
+						}),
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"xxx"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
+						}),
+					},
 				},
 			},
 			args: args{
-				id: "Test",
+				defType: "Test",
+			},
+			want:    "aaabbbccc",
+			wantErr: false,
+		},
+		{
+			name: "use ! operator",
+			fields: fields{
+				m: DefinitionMap{
+					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:         "Test",
+						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+					})},
+					"NestTest": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"xxx"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"k1!": "_"}),
+						}),
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"ddd"},
+							Constraints:  &Constraints{},
+						}),
+					},
+				},
+			},
+			args: args{
+				defType:      "Test",
+				initialState: State{"k1": "v1"},
+			},
+			want:    "aaadddccc",
+			wantErr: false,
+		},
+		{
+			name: "use ? operator",
+			fields: fields{
+				m: DefinitionMap{
+					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:         "Test",
+						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+					})},
+					"NestTest": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"xxx"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"K1?": "V2", "K2": "V2"}),
+						}),
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"bbb"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"K1?": "V1", "K2": "V2", "K3?": "V3"}),
+						}),
+					},
+				},
+			},
+			args: args{
+				defType:      "Test",
+				initialState: State{"K1": "V1", "K2": "V2"},
+			},
+			want:    "aaabbbccc",
+			wantErr: false,
+		},
+		{
+			name: "use + operator",
+			fields: fields{
+				m: DefinitionMap{
+					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:         "Test",
+						RawTemplates: []RawTemplate{"aaa{{.NestTest}}{{.NestTest2}}"},
+					})},
+					"NestTest": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"bbb"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"K1+": "V1"}),
+						}),
+					},
+					"NestTest2": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest2",
+							RawTemplates: []RawTemplate{"xxx"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"K1!": "_"}),
+						}),
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest2",
+							RawTemplates: []RawTemplate{"ccc"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"K1": "V1"}),
+						}),
+					},
+				},
+			},
+			args: args{
+				defType: "Test",
 			},
 			want:    "aaabbbccc",
 			wantErr: false,
@@ -71,7 +160,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			d := &DefinitionRepository{
 				m: tt.fields.m,
 			}
-			got, err := d.Generate(tt.args.id)
+			got, err := d.Generate(tt.args.defType, tt.args.initialState)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DefinitionRepository.Generate() error = %v, wantErr %v", err, tt.wantErr)
 				return
