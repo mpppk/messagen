@@ -22,7 +22,7 @@ codecov:  coverage
 
 .PHONY: build
 build:
-	go build
+	go build -o messagen.bin
 
 .PHONY: cross-build-snapshot
 cross-build:
