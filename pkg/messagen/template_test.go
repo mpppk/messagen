@@ -119,7 +119,7 @@ func TestTemplate_Execute(t *testing.T) {
 		tmpl    *template.Template
 	}
 	type args struct {
-		m Labels
+		state State
 	}
 	tests := []struct {
 		name    string
@@ -134,7 +134,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Raw: "aaa{{.id1}}ccc",
 			},
 			args: args{
-				m: Labels{"id1": "bbb"},
+				state: State{"id1": "bbb"},
 			},
 			want:    "aaabbbccc",
 			wantErr: false,
@@ -146,7 +146,7 @@ func TestTemplate_Execute(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to create new template: error = %v", err)
 			}
-			got, err := r.Execute(tt.args.m)
+			got, err := r.Execute(tt.args.state)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Template.Execute() error = %v, wantErr %v", err, tt.wantErr)
 				return

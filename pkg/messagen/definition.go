@@ -1,8 +1,6 @@
 package messagen
 
 import (
-	"fmt"
-
 	"golang.org/x/xerrors"
 )
 
@@ -13,8 +11,7 @@ type Alias map[DefinitionType]DefinitionType
 type RawDefinition struct {
 	Type           DefinitionType
 	RawTemplates   []RawTemplate
-	Labels         Labels
-	Requires       Labels
+	Constraints    *Constraints
 	Alias          Alias
 	AllowDuplicate bool
 	Weight         DefinitionWeight
@@ -37,26 +34,10 @@ func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
 	}, nil
 }
 
-func (d *Definition) CanBePicked(labels Labels) (bool, string) {
-	for requireDefType, requireLabel := range d.Requires {
-		// 新しいdefがrequireしていて現在のdefにない場合はskip
-		label, ok := labels[requireDefType]
-		if !ok {
-			return false, fmt.Sprintf("labels does not have required Type key: %s actual: %s", d.Type, requireLabel)
-		}
-		if label != requireLabel {
-			return false, fmt.Sprintf("Target Definition Type(%s) does not have required label: %s actual: %s", d.Type, requireLabel, label)
-		}
+func (d *Definition) CanBePicked(state State) (bool, error) {
+	if ok, err := d.Constraints.AreSatisfied(state); err != nil {
+		return false, xerrors.Errorf("failed to check definition can be picked: %w", err)
+	} else {
+		return ok, nil
 	}
-	return true, ""
-}
-
-func (d *Definition) ListUnsatisfiedRequires(currentLabels Labels) (types []DefinitionType) {
-	for defTypeStr, label := range d.Requires {
-		if l, ok := currentLabels[defTypeStr]; ok && l == label {
-			continue
-		}
-		types = append(types, DefinitionType(defTypeStr))
-	}
-	return
 }

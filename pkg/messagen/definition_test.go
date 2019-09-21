@@ -10,9 +10,17 @@ func newDefinitionOrPanic(rawDefinition *RawDefinition) *Definition {
 	return def
 }
 
+func newConstraintsOrPanic(raw RawConstraints) *Constraints {
+	c, err := NewConstraints(raw)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 func TestDefinition_CanBePicked(t *testing.T) {
 	type args struct {
-		labels Labels
+		state State
 	}
 	tests := []struct {
 		name       string
@@ -27,15 +35,14 @@ func TestDefinition_CanBePicked(t *testing.T) {
 				&RawDefinition{
 					Type:           "Root",
 					RawTemplates:   []RawTemplate{""},
-					Labels:         Labels{},
-					Requires:       Labels{"Key": "Value"},
+					Constraints:    newConstraintsOrPanic(RawConstraints{"Key": "Value"}),
 					Alias:          Alias{},
 					AllowDuplicate: false,
 					Weight:         0,
 				},
 			),
 			args: args{
-				labels: Labels{"Key": "Value"},
+				state: State{"Key": "Value"},
 			},
 			want: true,
 			//want1: "",
@@ -46,15 +53,14 @@ func TestDefinition_CanBePicked(t *testing.T) {
 				&RawDefinition{
 					Type:           "Root",
 					RawTemplates:   []RawTemplate{""},
-					Labels:         Labels{},
-					Requires:       Labels{"Key": "Value"},
+					Constraints:    newConstraintsOrPanic(RawConstraints{"Key": "Value"}),
 					Alias:          Alias{},
 					AllowDuplicate: false,
 					Weight:         0,
 				},
 			),
 			args: args{
-				labels: Labels{"Key": "OtherValue"},
+				state: State{"Key": "OtherValue"},
 			},
 			want: false,
 			//want1: "",
@@ -62,7 +68,7 @@ func TestDefinition_CanBePicked(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := tt.definition.CanBePicked(tt.args.labels)
+			got, _ := tt.definition.CanBePicked(tt.args.state)
 			if got != tt.want {
 				t.Errorf("Definition.CanBePicked() got = %v, want %v", got, tt.want)
 			}

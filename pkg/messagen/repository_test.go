@@ -24,8 +24,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
 						Type:           "Test",
 						RawTemplates:   []RawTemplate{"aaa"},
-						Labels:         Labels{},
-						Requires:       Labels{},
+						Constraints:    &Constraints{},
 						Alias:          Alias{},
 						AllowDuplicate: false,
 						Weight:         0,
@@ -45,8 +44,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
 						Type:           "Test",
 						RawTemplates:   []RawTemplate{"aaa{{.NestTest}}ccc"},
-						Labels:         Labels{},
-						Requires:       Labels{},
+						Constraints:    &Constraints{},
 						Alias:          Alias{},
 						AllowDuplicate: false,
 						Weight:         0,
@@ -54,8 +52,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					"NestTest": []*Definition{newDefinitionOrPanic(&RawDefinition{
 						Type:           "NestTest",
 						RawTemplates:   []RawTemplate{"bbb"},
-						Labels:         Labels{},
-						Requires:       Labels{},
+						Constraints:    &Constraints{},
 						Alias:          Alias{},
 						AllowDuplicate: false,
 						Weight:         0,

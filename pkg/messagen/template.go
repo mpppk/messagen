@@ -38,10 +38,10 @@ func NewTemplate(rawTemplate RawTemplate) (*Template, error) {
 	}, err
 }
 
-func (r *Template) Execute(m Labels) (Message, error) {
+func (r *Template) Execute(state State) (Message, error) {
 	buf := &bytes.Buffer{}
-	if err := r.tmpl.Execute(buf, m); err != nil {
-		return "", xerrors.Errorf("failed to execute template. template:%s  m:%#v : %w", r.Raw, m, err)
+	if err := r.tmpl.Execute(buf, state); err != nil {
+		return "", xerrors.Errorf("failed to execute template. template:%s  state:%#v : %w", r.Raw, state, err)
 	}
 	return Message(buf.String()), nil
 }

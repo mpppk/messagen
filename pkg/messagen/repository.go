@@ -8,16 +8,6 @@ import (
 
 type DefinitionMap map[DefinitionType][]*Definition
 type Message string
-type Labels map[string]Message
-
-func (g Labels) Set(id DefinitionType, message Message) {
-	g[string(id)] = message
-}
-
-func (g Labels) Get(id DefinitionType) (Message, bool) {
-	msg, ok := g[string(id)]
-	return msg, ok
-}
 
 type DefinitionRepository struct {
 	m DefinitionMap
@@ -58,36 +48,36 @@ func (d *DefinitionRepository) Add(def *Definition) {
 }
 
 func (d *DefinitionRepository) Generate(defType DefinitionType) (string, error) {
-	currentLabels := Labels{}
+	state := State{}
 	def, ok := d.pickRandom(defType)
 	if !ok {
 		return "", xerrors.Errorf("failed to generate message. Root Definition type not found: %s", defType)
 	}
 
-	msg, err := generate(def, currentLabels, d)
+	msg, err := generate(def, state, d)
 	return string(msg), err
 }
 
-func generate(def *Definition, currentLabels Labels, repo *DefinitionRepository) (Message, error) {
+func generate(def *Definition, state State, repo *DefinitionRepository) (Message, error) {
 	defTemplate := def.Templates.GetRandom()
 	if len(defTemplate.Depends) == 0 {
 		return Message(defTemplate.Raw), nil
 	}
 
 	for _, defType := range defTemplate.Depends {
-		if _, ok := currentLabels.Get(defType); ok {
+		if _, ok := state.Get(defType); ok {
 			continue
 		}
 
 		for _, candidateDef := range repo.List(defType) {
-			if ok, _ := def.CanBePicked(currentLabels); ok {
-				message, err := generate(candidateDef, currentLabels, repo)
+			if ok, _ := def.CanBePicked(state); ok {
+				message, err := generate(candidateDef, state, repo)
 				if err != nil {
 					return "", err
 				}
-				currentLabels.Set(defType, message)
+				state.Set(defType, message)
 			}
 		}
 	}
-	return defTemplate.Execute(currentLabels)
+	return defTemplate.Execute(state)
 }
