@@ -1,6 +1,8 @@
-package messagen
+package internal
 
-import "testing"
+import (
+	"testing"
+)
 
 func newDefinitionOrPanic(rawDefinition *RawDefinition) *Definition {
 	def, err := NewDefinition(rawDefinition)

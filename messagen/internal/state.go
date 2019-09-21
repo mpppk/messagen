@@ -1,6 +1,8 @@
-package messagen
+package internal
 
-import "golang.org/x/xerrors"
+import (
+	"golang.org/x/xerrors"
+)
 
 type State map[string]Message
 
