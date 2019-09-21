@@ -1,4 +1,4 @@
-package messagen
+package internal
 
 import (
 	"reflect"

@@ -1,4 +1,4 @@
-package messagen
+package internal
 
 import (
 	"fmt"
@@ -7,11 +7,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type DefinitionMap map[DefinitionType][]*Definition
+type definitionMap map[DefinitionType][]*Definition
 type Message string
 
 type DefinitionRepository struct {
-	m DefinitionMap
+	m definitionMap
 }
 
 type DefinitionRepositoryOption struct {
@@ -19,7 +19,7 @@ type DefinitionRepositoryOption struct {
 
 func NewDefinitionRepository() *DefinitionRepository {
 	return &DefinitionRepository{
-		m: DefinitionMap{},
+		m: definitionMap{},
 	}
 }
 
@@ -39,7 +39,18 @@ func (d *DefinitionRepository) pickRandom(defType DefinitionType) (*Definition, 
 	return defs[rand.Intn(len(defs))], true
 }
 
-func (d *DefinitionRepository) Add(def *Definition) {
+func (d *DefinitionRepository) Add(rawDefs ...*RawDefinition) error {
+	for _, rawDefinition := range rawDefs {
+		def, err := NewDefinition(rawDefinition)
+		if err != nil {
+			return xerrors.Errorf("failed to add definition to repository: %w", err)
+		}
+		d.addDefinition(def)
+	}
+	return nil
+}
+
+func (d *DefinitionRepository) addDefinition(def *Definition) {
 	if defs, ok := d.m[def.Type]; ok {
 		d.m[def.Type] = append(defs, def)
 		return
@@ -48,7 +59,7 @@ func (d *DefinitionRepository) Add(def *Definition) {
 	return
 }
 
-func (d *DefinitionRepository) Generate(defType DefinitionType, initialState State) (string, error) {
+func (d *DefinitionRepository) Generate(defType DefinitionType, initialState State) (Message, error) {
 	if initialState == nil {
 		initialState = State{}
 	}
@@ -58,7 +69,7 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState Sta
 	}
 
 	msg, err := generate(def, initialState, d)
-	return string(msg), err
+	return msg, err
 }
 
 func generate(def *Definition, state State, repo *DefinitionRepository) (Message, error) {
