@@ -154,6 +154,35 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			want:    "aaabbbccc",
 			wantErr: false,
 		},
+		{
+			name: "use / operator",
+			fields: fields{
+				m: DefinitionMap{
+					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:         "Test",
+						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+					})},
+					"NestTest": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"bbb"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"K1/": ".?1"}),
+						}),
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"xxx"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"K1/": ".?2"}),
+						}),
+					},
+				},
+			},
+			args: args{
+				defType:      "Test",
+				initialState: State{"K1": "V1"},
+			},
+			want:    "aaabbbccc",
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
