@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 
@@ -9,17 +10,25 @@ import (
 
 type definitionMap map[DefinitionType][]*Definition
 type Message string
+type TemplatePicker func(templates *Templates, state State) (Templates, error)
 
 type DefinitionRepository struct {
-	m definitionMap
+	m               definitionMap
+	templatePickers []TemplatePicker
 }
 
 type DefinitionRepositoryOption struct {
+	TemplatePickers []TemplatePicker
 }
 
-func NewDefinitionRepository() *DefinitionRepository {
+func NewDefinitionRepository(opt *DefinitionRepositoryOption) *DefinitionRepository {
+	templatePickers := opt.TemplatePickers
+	if templatePickers == nil {
+		templatePickers = []TemplatePicker{}
+	}
 	return &DefinitionRepository{
-		m: definitionMap{},
+		m:               definitionMap{},
+		templatePickers: templatePickers,
 	}
 }
 
@@ -72,8 +81,34 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState Sta
 	return msg, err
 }
 
+func (d *DefinitionRepository) applyTemplatePickers(templates Templates, state State) (newTemplates Templates, err error) {
+	newTemplates, err = (&templates).Copy()
+	if err != nil {
+		return nil, err
+	}
+	for _, picker := range d.templatePickers {
+		if len(newTemplates) == 0 {
+			return Templates{}, nil
+		}
+		newTemplates, err = picker(&newTemplates, state)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return newTemplates, nil
+}
+
 func generate(def *Definition, state State, repo *DefinitionRepository) (Message, error) {
-	defTemplate := def.Templates.GetRandom()
+	templates, err := repo.applyTemplatePickers(def.Templates, state)
+	if err != nil {
+		return "", err
+	}
+
+	if len(templates) == 0 {
+		return "", errors.New("TODO: return recoverable error") // TODO
+	}
+
+	defTemplate := templates[0] // FIXME
 	if len(defTemplate.Depends) == 0 {
 		return Message(defTemplate.Raw), nil
 	}

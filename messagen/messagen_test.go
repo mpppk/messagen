@@ -8,7 +8,7 @@ import (
 )
 
 func Example() {
-	generator, _ := messagen.New()
+	generator, _ := messagen.New(nil)
 
 	definitions := []*messagen.Definition{
 		{
@@ -60,8 +60,8 @@ func Example() {
 		},
 	}
 
-	// Add definitions to generator.
-	_ = generator.Add(definitions...)
+	// AddDefinition definitions to generator.
+	_ = generator.AddDefinition(definitions...)
 
 	// Set random seed for pick definitions and templates.
 	rand.Seed(42)
@@ -80,6 +80,6 @@ func Example() {
 
 	// Output:
 	// She is Emily Williams.
-	// She is Sofia Williams.
-	// He is James Brown.
+	// She is Charlotte Smith.
+	// He is Benjamin Williams.
 }

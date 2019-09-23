@@ -57,10 +57,44 @@ func NewTemplates(rawTemplates []RawTemplate) (Templates, error) {
 		}
 		templates = append(templates, t)
 	}
-	return Templates(templates), nil
+	t := Templates(templates)
+	return t, nil
 }
 
-func (t Templates) GetRandom() *Template {
-	i := rand.Intn(len(t))
-	return t[i]
+func (t *Templates) GetRandom() (*Template, bool) {
+	if len(*t) == 0 {
+		return nil, false
+	}
+	i := rand.Intn(len(*t))
+	return (*t)[i], true
+}
+
+func (t *Templates) PopRandom() (*Template, bool) {
+	if len(*t) == 0 {
+		return nil, false
+	}
+	i := rand.Intn(len(*t))
+	tmpl := (*t)[i]
+	t.DeleteByIndex(i)
+	return tmpl, true
+}
+
+func (t *Templates) DeleteByIndex(i int) {
+	if i == 0 {
+		*t = (*t)[1:]
+		return
+	}
+	if len(*t)-1 == i {
+		*t = (*t)[:len(*t)-2]
+		return
+	}
+	*t = append((*t)[:i], (*t)[i+1:]...)
+}
+
+func (t *Templates) Copy() (Templates, error) {
+	var newRawTemplates []RawTemplate
+	for _, tmpl := range *t {
+		newRawTemplates = append(newRawTemplates, tmpl.Raw)
+	}
+	return NewTemplates(newRawTemplates)
 }
