@@ -80,6 +80,6 @@ func Example() {
 
 	// Output:
 	// She is Charlotte Williams.
-	// She is Sofia Smith.
-	// He is Liam Brown.
+	// She is Emily Smith.
+	// He is James Smith.
 }
