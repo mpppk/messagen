@@ -36,6 +36,9 @@ func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
 		rawDefinition.Constraints = constraints
 	}
 
+	if rawDefinition.Weight == 0 {
+		rawDefinition.Weight = 1
+	}
 	return &Definition{
 		RawDefinition: rawDefinition,
 		Templates:     templates,
@@ -48,4 +51,44 @@ func (d *Definition) CanBePicked(state State) (bool, error) {
 	} else {
 		return ok, nil
 	}
+}
+
+type Definitions []*Definition
+
+func NewDefinitions(rawDefs ...*RawDefinition) (Definitions, error) {
+	var definitions Definitions
+	for _, rawDef := range rawDefs {
+		def, err := NewDefinition(rawDef)
+		if err != nil {
+			return nil, xerrors.Errorf("failed to create new definitions: %w", err)
+		}
+		definitions = append(definitions, def)
+	}
+	return definitions, nil
+}
+
+func (d *Definitions) PopByIndex(index int) *Definition {
+	def := (*d)[index]
+	d.DeleteByIndex(index)
+	return def
+}
+
+func (d *Definitions) DeleteByIndex(i int) {
+	if i == 0 {
+		*d = (*d)[1:]
+		return
+	}
+	if len(*d)-1 == i {
+		*d = (*d)[:len(*d)-1]
+		return
+	}
+	*d = append((*d)[:i], (*d)[i+1:]...)
+}
+
+func (d *Definitions) Copy() (Definitions, error) {
+	var newRawDefinitions []*RawDefinition
+	for _, definition := range *d {
+		newRawDefinitions = append(newRawDefinitions, definition.RawDefinition)
+	}
+	return NewDefinitions(newRawDefinitions...)
 }
