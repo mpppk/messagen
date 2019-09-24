@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
 
 	"golang.org/x/xerrors"
@@ -125,7 +124,7 @@ func generate(def *Definition, state State, repo *DefinitionRepository) (Message
 	}
 
 	if len(templates) == 0 {
-		return "", errors.New("TODO: return recoverable error") // TODO
+		return "", NewNoPickableTemplateError("")
 	}
 
 	defTemplate := templates[0] // FIXME
@@ -153,7 +152,9 @@ func pickDef(defType DefinitionType, state State, repo *DefinitionRepository) (M
 	for _, candidateDef := range candidateDefs {
 		if ok, _ := candidateDef.CanBePicked(state); ok {
 			message, err := generate(candidateDef, state, repo)
-			if err != nil {
+			if e, ok := err.(MessagenError); ok && e.Recoverable() {
+				continue
+			} else if err != nil {
 				return "", err
 			}
 			state.Set(defType, message)
