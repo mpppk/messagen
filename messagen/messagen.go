@@ -1,3 +1,4 @@
+// messagen is the tree structured template engine with declarative API.
 package messagen
 
 import (
@@ -36,17 +37,35 @@ func (d *Definition) toRawDefinition() (*internal.RawDefinition, error) {
 	}, nil
 }
 
+var defaultTemplatePickers = []internal.TemplatePicker{internal.RandomTemplatePicker}
+
 type Messagen struct {
 	repo *internal.DefinitionRepository
 }
+type Option struct {
+	TemplatePickers []internal.TemplatePicker
+}
 
-func New() (*Messagen, error) {
+func New(opt *Option) (*Messagen, error) {
+	var templatePickers []internal.TemplatePicker
+	if opt == nil {
+		templatePickers = defaultTemplatePickers
+	} else if opt.TemplatePickers == nil {
+		templatePickers = defaultTemplatePickers
+	} else {
+		templatePickers = opt.TemplatePickers
+	}
+
 	return &Messagen{
-		repo: internal.NewDefinitionRepository(),
+		repo: internal.NewDefinitionRepository(
+			&internal.DefinitionRepositoryOption{
+				TemplatePickers: templatePickers,
+			},
+		),
 	}, nil
 }
 
-func (m *Messagen) Add(defs ...*Definition) error {
+func (m *Messagen) AddDefinition(defs ...*Definition) error {
 	for _, def := range defs {
 		rawDef, err := def.toRawDefinition()
 		if err != nil {

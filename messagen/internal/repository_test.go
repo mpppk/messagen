@@ -1,12 +1,14 @@
 package internal
 
 import (
+	"reflect"
 	"testing"
 )
 
 func TestDefinitionRepository_Generate(t *testing.T) {
 	type fields struct {
-		m definitionMap
+		m               definitionMap
+		templatePickers []TemplatePicker
 	}
 	type args struct {
 		defType      DefinitionType
@@ -29,6 +31,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 						RawTemplates: []RawTemplate{"aaa"},
 					})},
 				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -56,6 +59,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 						}),
 					},
 				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -90,6 +94,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 						}),
 					},
 				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -118,6 +123,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 						}),
 					},
 				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType:      "Test",
@@ -147,6 +153,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 						}),
 					},
 				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType:      "Test",
@@ -183,6 +190,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 						}),
 					},
 				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -211,6 +219,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 						}),
 					},
 				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType:      "Test",
@@ -227,7 +236,8 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			d := &DefinitionRepository{
-				m: tt.fields.m,
+				m:               tt.fields.m,
+				templatePickers: tt.fields.templatePickers,
 			}
 			got, err := d.Generate(tt.args.defType, tt.args.initialState)
 			if (err != nil) != tt.wantErr {
@@ -236,6 +246,42 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("DefinitionRepository.Generate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRandomTemplatePicker(t *testing.T) {
+	argTemplates := newTemplatesOrPanic("a")
+	type args struct {
+		templates *Templates
+		state     State
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    Templates
+		wantErr bool
+	}{
+		{
+			name: "",
+			args: args{
+				templates: &argTemplates,
+				state:     State{},
+			},
+			want:    newTemplatesOrPanic("a"),
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := RandomTemplatePicker(tt.args.templates, tt.args.state)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RandomTemplatePicker() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("RandomTemplatePicker() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
