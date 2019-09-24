@@ -12,6 +12,25 @@ type definitionMap map[DefinitionType][]*Definition
 type Message string
 type TemplatePicker func(templates *Templates, state State) (Templates, error)
 
+func RandomTemplatePicker(templates *Templates, state State) (Templates, error) {
+	var newTemplates Templates
+	for {
+		if len(*templates) == 0 {
+			break
+		}
+		tmpl, ok := templates.PopRandom()
+		if !ok {
+			return nil, xerrors.Errorf("failed to pop template random from %v", templates)
+		}
+		newTemplates = append(newTemplates, tmpl)
+	}
+	return newTemplates, nil
+}
+
+func AscendingOrderTemplatePicker(templates *Templates, state State) (Templates, error) {
+	return *templates, nil
+}
+
 type DefinitionRepository struct {
 	m               definitionMap
 	templatePickers []TemplatePicker

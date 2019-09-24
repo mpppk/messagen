@@ -61,14 +61,6 @@ func NewTemplates(rawTemplates []RawTemplate) (Templates, error) {
 	return t, nil
 }
 
-func (t *Templates) GetRandom() (*Template, bool) {
-	if len(*t) == 0 {
-		return nil, false
-	}
-	i := rand.Intn(len(*t))
-	return (*t)[i], true
-}
-
 func (t *Templates) PopRandom() (*Template, bool) {
 	if len(*t) == 0 {
 		return nil, false
@@ -85,7 +77,7 @@ func (t *Templates) DeleteByIndex(i int) {
 		return
 	}
 	if len(*t)-1 == i {
-		*t = (*t)[:len(*t)-2]
+		*t = (*t)[:len(*t)-1]
 		return
 	}
 	*t = append((*t)[:i], (*t)[i+1:]...)
