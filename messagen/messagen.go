@@ -37,7 +37,7 @@ func (d *Definition) toRawDefinition() (*internal.RawDefinition, error) {
 	}, nil
 }
 
-var defaultTemplatePickers = []internal.TemplatePicker{RandomTemplatePicker}
+var defaultTemplatePickers = []internal.TemplatePicker{internal.RandomTemplatePicker}
 
 type Messagen struct {
 	repo *internal.DefinitionRepository

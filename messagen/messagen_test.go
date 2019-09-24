@@ -64,7 +64,7 @@ func Example() {
 	_ = generator.AddDefinition(definitions...)
 
 	// Set random seed for pick definitions and templates.
-	rand.Seed(42)
+	rand.Seed(0)
 
 	// Generate method generate message according to added definitions.
 	// First argument represent definition Type of start point.
@@ -79,7 +79,7 @@ func Example() {
 	fmt.Printf("%s\n%s\n%s\n", message, femaleMessage, maleMessage)
 
 	// Output:
-	// She is Emily Williams.
-	// She is Charlotte Smith.
-	// He is Benjamin Williams.
+	// She is Charlotte Williams.
+	// She is Sofia Smith.
+	// He is Liam Brown.
 }
