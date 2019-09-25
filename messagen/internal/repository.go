@@ -2,7 +2,6 @@ package internal
 
 import (
 	"errors"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
@@ -83,7 +82,7 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState Sta
 	msgChan := make(chan Message)
 	errChan := make(chan error)
 	for _, def := range defs {
-		go func() {
+		go func(def *Definition) {
 			defMsgChan, defErrChan, err := generate(def, initialState, d)
 			if err != nil {
 				errChan <- err
@@ -95,7 +94,7 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState Sta
 			case err := <-defErrChan:
 				defErrChan <- err
 			}
-		}()
+		}(def)
 	}
 	select {
 	case msg := <-msgChan:
@@ -165,10 +164,10 @@ func generate(def *Definition, state State, repo *DefinitionRepository) (chan Me
 }
 
 func resolveTemplates(templates Templates, state State, repo *DefinitionRepository) (chan Message, chan error) {
-	fmt.Println("resolveTemplates")
 	eg := errgroup.Group{}
 	messageChan := make(chan Message)
 	for _, defTemplate := range templates {
+		defTemplate := defTemplate
 		eg.Go(func() error {
 			if len(defTemplate.Depends) == 0 {
 				messageChan <- Message(defTemplate.Raw)
@@ -240,7 +239,7 @@ func pickDef(defType DefinitionType, state State, repo *DefinitionRepository) (c
 	stateChan := make(chan State)
 	errChan := make(chan error)
 	for _, candidateDef := range candidateDefs {
-		go func() {
+		go func(candidateDef *Definition) {
 			if ok, _ := candidateDef.CanBePicked(state); ok {
 				defMessageChan, defErrChan, err := generate(candidateDef, state, repo)
 				if e, ok := err.(MessagenError); ok && e.Recoverable() {
@@ -276,7 +275,7 @@ func pickDef(defType DefinitionType, state State, repo *DefinitionRepository) (c
 					return
 				}
 			}
-		}()
+		}(candidateDef)
 	}
 	return stateChan, nil
 }
