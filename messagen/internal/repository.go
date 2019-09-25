@@ -215,67 +215,75 @@ func resolveDefDepends(template *Template, state State, repo *DefinitionReposito
 	errChan := make(chan error)
 	go func() {
 		for newState := range pickDefStateChan {
-			satisfiedState, err := resolveDefDepends(template, newState, repo)
+			satisfiedStateChan, err := resolveDefDepends(template, newState, repo)
 			if err != nil {
 				errChan <- err
 				return
 			}
 			go func() {
-				for satisfiedState := range satisfiedState {
+				for satisfiedState := range satisfiedStateChan {
 					stateChan <- satisfiedState
 				}
 			}()
 		}
 	}()
+
+	go func() {
+		panic(<-errChan) // FIXME
+	}()
+
 	return stateChan, nil
 }
 
 func pickDef(defType DefinitionType, state State, repo *DefinitionRepository) (chan State, error) {
 	candidateDefs, err := repo.pickDefinitions(defType, state)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to ")
+		return nil, xerrors.Errorf("failed to pick definitions")
 	}
 
 	stateChan := make(chan State)
-	errChan := make(chan error)
+	eg := errgroup.Group{}
 	for _, candidateDef := range candidateDefs {
-		go func(candidateDef *Definition) {
-			if ok, _ := candidateDef.CanBePicked(state); ok {
-				defMessageChan, defErrChan, err := generate(candidateDef, state, repo)
-				if e, ok := err.(MessagenError); ok && e.Recoverable() {
-				} else if err != nil {
-					errChan <- err
-					return
-				}
-
-				if defMessageChan == nil {
-					errChan <- errors.New("message chan is nil")
-					return
-				}
-
-				if defErrChan == nil {
-					errChan <- errors.New("err chan is nil")
-					return
-				}
-
-				select {
-				case defMessage, ok := <-defMessageChan:
-					if !ok {
-						return
-					}
-					newState := state.Copy()
-					newState.Set(defType, defMessage)
-					if _, err := newState.SetByConstraints(candidateDef.Constraints); err != nil {
-						errChan <- xerrors.Errorf("failed to update state while message generating: %w", err)
-						return
-					}
-					stateChan <- newState
-				case err := <-defErrChan:
-					errChan <- err
-					return
-				}
+		if ok, _ := candidateDef.CanBePicked(state); !ok {
+			continue
+		}
+		candidateDef := candidateDef
+		eg.Go(func() error {
+			defMessageChan, defErrChan, err := generate(candidateDef, state, repo)
+			if err != nil {
+				return err
 			}
-		}(candidateDef)
+
+			if defMessageChan == nil {
+				return errors.New("message chan is nil")
+			}
+
+			if defErrChan == nil {
+				return errors.New("err chan is nil")
+			}
+
+			select {
+			case defMessage, ok := <-defMessageChan:
+				if !ok {
+					return nil
+				}
+				newState := state.Copy()
+				newState.Set(defType, defMessage)
+				if _, err := newState.SetByConstraints(candidateDef.Constraints); err != nil {
+					return xerrors.Errorf("failed to update state while message generating: %w", err)
+				}
+				stateChan <- newState
+			case err := <-defErrChan:
+				return err
+			}
+			return nil
+		})
 	}
+
+	go func() {
+		if err := eg.Wait(); err != nil {
+			panic(err) // FIXME
+		}
+	}()
 	return stateChan, nil
 }
