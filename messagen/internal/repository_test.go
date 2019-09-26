@@ -103,6 +103,87 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "unresolvable template in template",
+			fields: fields{
+				m: definitionMap{
+					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:         "Test",
+						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+					})},
+					"NestTest": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"xxx"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
+						}),
+					},
+				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
+			},
+			args: args{
+				defType: "Test",
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "unresolvable template in template2",
+			fields: fields{
+				m: definitionMap{
+					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:         "Test",
+						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+					})},
+					"NestTestxxxxxxx": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"xxx"},
+							Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
+						}),
+					},
+				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
+			},
+			args: args{
+				defType: "Test",
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "unresolvable template in template2",
+			fields: fields{
+				m: definitionMap{
+					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
+						Type:         "Test",
+						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+					})},
+					"NestTest": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"{{.NestTest2}}"},
+						}),
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest",
+							RawTemplates: []RawTemplate{"bbb"},
+						}),
+					},
+					"NestTest2": []*Definition{
+						newDefinitionOrPanic(&RawDefinition{
+							Type:         "NestTest2",
+							RawTemplates: []RawTemplate{"{{.NoExistDef}}"},
+						}),
+					},
+				},
+				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
+			},
+			args: args{
+				defType: "Test",
+			},
+			want:    "aaabbbccc",
+			wantErr: false,
+		},
+		{
 			name: "use ! operator",
 			fields: fields{
 				m: definitionMap{
@@ -230,10 +311,6 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.name != "two variable in template" {
-			continue
-		}
-
 		t.Run(tt.name, func(t *testing.T) {
 			d := &DefinitionRepository{
 				m:               tt.fields.m,

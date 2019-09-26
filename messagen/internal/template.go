@@ -38,12 +38,27 @@ func NewTemplate(rawTemplate RawTemplate) (*Template, error) {
 	}, err
 }
 
-func (r *Template) Execute(state State) (Message, error) {
+func (t *Template) Execute(state State) (Message, error) {
 	buf := &bytes.Buffer{}
-	if err := r.tmpl.Execute(buf, state); err != nil {
-		return "", xerrors.Errorf("failed to execute template. template:%s  state:%#v : %w", r.Raw, state, err)
+	if err := t.tmpl.Execute(buf, state); err != nil {
+		return "", xerrors.Errorf("failed to execute template. template:%s  state:%#v : %w", t.Raw, state, err)
 	}
 	return Message(buf.String()), nil
+}
+
+func (t *Template) IsSatisfiedState(state State) bool {
+	_, ok := t.GetFirstUnsatisfiedDef(state)
+	return !ok
+}
+
+func (t *Template) GetFirstUnsatisfiedDef(state State) (DefinitionType, bool) {
+	for _, defType := range t.Depends {
+		if _, ok := state.Get(defType); ok {
+			continue
+		}
+		return defType, true
+	}
+	return "", false
 }
 
 type Templates []*Template

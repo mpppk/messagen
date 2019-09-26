@@ -2,7 +2,9 @@ package internal
 
 import (
 	"errors"
-	"fmt"
+	"sync"
+
+	"golang.org/x/sync/errgroup"
 
 	"golang.org/x/xerrors"
 )
@@ -78,12 +80,49 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState Sta
 		return "", xerrors.Errorf("failed to generate message: %w", err)
 	}
 
+	msgChan := make(chan Message)
+	errChan := make(chan error)
+	wg := sync.WaitGroup{}
 	for _, def := range defs {
-		msg, err := generate(def, initialState, d)
-		// TODO: handling recoverable error
-		return msg, err
+		wg.Add(1)
+		go func(def *Definition) {
+			defMsgChan, defErrChan, err := generate(def, initialState, d)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			select {
+			case msg, ok := <-defMsgChan:
+				if ok {
+					msgChan <- msg
+				} else {
+					wg.Done()
+					return
+				}
+			case err, ok := <-defErrChan:
+				if ok {
+					errChan <- err
+				}
+				wg.Done()
+				return
+			}
+		}(def)
 	}
-	return "", xerrors.Errorf("failed to generate message. satisfied definitions are don't exist")
+
+	go func() {
+		wg.Wait()
+		close(msgChan)
+	}()
+
+	select {
+	case msg, ok := <-msgChan:
+		if !ok {
+			return "", xerrors.Errorf("valid message does not exist")
+		}
+		return msg, nil
+	case err := <-errChan:
+		return "", err
+	}
 }
 
 func (d *DefinitionRepository) applyTemplatePickers(templates Templates, state State) (newTemplates Templates, err error) {
@@ -118,50 +157,167 @@ func (d *DefinitionRepository) applyDefinitionPickers(defs Definitions, state St
 	return newDefinitions, nil
 }
 
-func generate(def *Definition, state State, repo *DefinitionRepository) (Message, error) {
+func generate(def *Definition, state State, repo *DefinitionRepository) (chan Message, chan error, error) {
+	messageChan := make(chan Message)
+	errChan := make(chan error)
 	templates, err := repo.applyTemplatePickers(def.Templates, state)
 	if err != nil {
-		return "", err
+		return nil, nil, err
 	}
 
-	if len(templates) == 0 {
-		return "", errors.New("TODO: return recoverable error") // TODO
-	}
-
-	defTemplate := templates[0] // FIXME
-	if len(defTemplate.Depends) == 0 {
-		return Message(defTemplate.Raw), nil
-	}
-
-	for _, defType := range defTemplate.Depends {
-		if _, ok := state.Get(defType); ok {
-			continue
+	go func() {
+		templateMessageChan, templateErrChan := resolveTemplates(templates, state, repo)
+		select {
+		case msg, ok := <-templateMessageChan:
+			if ok {
+				messageChan <- msg
+			} else {
+				close(messageChan)
+				return
+			}
+		case err, ok := <-templateErrChan:
+			if ok {
+				errChan <- err
+			}
 		}
-
-		if _, err := pickDef(defType, state, repo); err != nil {
-			return "", xerrors.Errorf("failed to pick depend definition: %w", err)
-		}
-	}
-	return defTemplate.Execute(state)
+	}()
+	return messageChan, errChan, nil
 }
 
-func pickDef(defType DefinitionType, state State, repo *DefinitionRepository) (Message, error) {
+func resolveTemplates(templates Templates, state State, repo *DefinitionRepository) (chan Message, chan error) {
+	eg := errgroup.Group{}
+	messageChan := make(chan Message)
+	for _, defTemplate := range templates {
+		defTemplate := defTemplate
+		eg.Go(func() error {
+			if len(defTemplate.Depends) == 0 {
+				messageChan <- Message(defTemplate.Raw)
+				return nil
+			}
+			newState := state.Copy()
+			stateChan, err := resolveDefDepends(defTemplate, newState, repo)
+			if err != nil {
+				return err
+			}
+			for satisfiedState := range stateChan {
+				msg, err := defTemplate.Execute(satisfiedState)
+				if err != nil {
+					return err
+				}
+				messageChan <- msg
+			}
+			return nil
+		})
+	}
+	errChan := make(chan error)
+	go func() {
+		if err := eg.Wait(); err != nil {
+			errChan <- err
+		}
+		close(messageChan)
+	}()
+	return messageChan, errChan
+}
+
+func resolveDefDepends(template *Template, state State, repo *DefinitionRepository) (chan State, error) {
+	stateChan := make(chan State)
+	if template.IsSatisfiedState(state) {
+		go func() {
+			stateChan <- state
+			close(stateChan)
+		}()
+		return stateChan, nil
+	}
+
+	defType, _ := template.GetFirstUnsatisfiedDef(state)
+	pickDefStateChan, err := pickDef(defType, state, repo)
+	if err != nil {
+		return nil, err
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	errChan := make(chan error)
+	go func() {
+		for newState := range pickDefStateChan {
+			satisfiedStateChan, err := resolveDefDepends(template, newState, repo)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			wg.Add(1)
+			go func() {
+				for satisfiedState := range satisfiedStateChan {
+					stateChan <- satisfiedState
+				}
+				wg.Done()
+			}()
+		}
+		wg.Done()
+	}()
+
+	go func() {
+		panic(<-errChan) // FIXME goroutine leak
+	}()
+
+	go func() {
+		wg.Wait()
+		close(stateChan)
+	}()
+
+	return stateChan, nil
+}
+
+func pickDef(defType DefinitionType, state State, repo *DefinitionRepository) (chan State, error) {
 	candidateDefs, err := repo.pickDefinitions(defType, state)
 	if err != nil {
-		return "", xerrors.Errorf("failed to ")
+		return nil, xerrors.Errorf("failed to pick definitions")
 	}
+
+	stateChan := make(chan State)
+	eg := errgroup.Group{}
 	for _, candidateDef := range candidateDefs {
-		if ok, _ := candidateDef.CanBePicked(state); ok {
-			message, err := generate(candidateDef, state, repo)
-			if err != nil {
-				return "", err
-			}
-			state.Set(defType, message)
-			if _, err := state.SetByConstraints(candidateDef.Constraints); err != nil {
-				return "", xerrors.Errorf("failed to update state while message generating: %w", err)
-			}
-			return message, nil
+		if ok, _ := candidateDef.CanBePicked(state); !ok {
+			continue
 		}
+		candidateDef := candidateDef
+		eg.Go(func() error {
+			defMessageChan, defErrChan, err := generate(candidateDef, state, repo)
+			if err != nil {
+				return err
+			}
+
+			if defMessageChan == nil {
+				return errors.New("message chan is nil")
+			}
+
+			if defErrChan == nil {
+				return errors.New("err chan is nil")
+			}
+
+			select {
+			case defMessage, ok := <-defMessageChan:
+				if !ok {
+					return nil
+				}
+				newState := state.Copy()
+				newState.Set(defType, defMessage)
+				if _, err := newState.SetByConstraints(candidateDef.Constraints); err != nil {
+					return xerrors.Errorf("failed to update state while message generating: %w", err)
+				}
+				stateChan <- newState
+			case err := <-defErrChan:
+				return err
+			}
+			return nil
+		})
 	}
-	return "", fmt.Errorf("all depend definition are not satisfied constraints: %s", defType)
+
+	go func() {
+		if err := eg.Wait(); err != nil {
+			panic(err) // FIXME
+		}
+		close(stateChan)
+	}()
+	return stateChan, nil
 }

@@ -78,7 +78,7 @@ func Example() {
 	maleMessage, _ := generator.Generate("Root", map[string]string{"Gender": "Male"})
 	fmt.Printf("%s\n%s\n%s\n", message, femaleMessage, maleMessage)
 
-	// Output:
+	// Output
 	// She is Charlotte Williams.
 	// She is Emily Smith.
 	// He is James Smith.

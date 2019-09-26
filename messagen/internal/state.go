@@ -51,3 +51,11 @@ func (s State) Get(defType DefinitionType) (Message, bool) {
 	v, ok := s[string(defType)]
 	return v, ok
 }
+
+func (s State) Copy() State {
+	ns := State{}
+	for key, value := range s {
+		ns[key] = value
+	}
+	return ns
+}
