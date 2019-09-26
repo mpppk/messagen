@@ -2,6 +2,7 @@ package internal
 
 import (
 	"errors"
+	"sync"
 
 	"golang.org/x/sync/errgroup"
 
@@ -81,7 +82,9 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState Sta
 
 	msgChan := make(chan Message)
 	errChan := make(chan error)
+	wg := sync.WaitGroup{}
 	for _, def := range defs {
+		wg.Add(1)
 		go func(def *Definition) {
 			defMsgChan, defErrChan, err := generate(def, initialState, d)
 			if err != nil {
@@ -89,15 +92,33 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState Sta
 				return
 			}
 			select {
-			case msg := <-defMsgChan:
-				msgChan <- msg
-			case err := <-defErrChan:
-				defErrChan <- err
+			case msg, ok := <-defMsgChan:
+				if ok {
+					msgChan <- msg
+				} else {
+					wg.Done()
+					return
+				}
+			case err, ok := <-defErrChan:
+				if ok {
+					errChan <- err
+				}
+				wg.Done()
+				return
 			}
 		}(def)
 	}
+
+	go func() {
+		wg.Wait()
+		close(msgChan)
+	}()
+
 	select {
-	case msg := <-msgChan:
+	case msg, ok := <-msgChan:
+		if !ok {
+			return "", xerrors.Errorf("valid message does not exist")
+		}
 		return msg, nil
 	case err := <-errChan:
 		return "", err
@@ -151,6 +172,7 @@ func generate(def *Definition, state State, repo *DefinitionRepository) (chan Me
 			if ok {
 				messageChan <- msg
 			} else {
+				close(messageChan)
 				return
 			}
 		case err, ok := <-templateErrChan:
@@ -159,7 +181,6 @@ func generate(def *Definition, state State, repo *DefinitionRepository) (chan Me
 			}
 		}
 	}()
-
 	return messageChan, errChan, nil
 }
 
@@ -193,6 +214,7 @@ func resolveTemplates(templates Templates, state State, repo *DefinitionReposito
 		if err := eg.Wait(); err != nil {
 			errChan <- err
 		}
+		close(messageChan)
 	}()
 	return messageChan, errChan
 }
@@ -202,6 +224,7 @@ func resolveDefDepends(template *Template, state State, repo *DefinitionReposito
 	if template.IsSatisfiedState(state) {
 		go func() {
 			stateChan <- state
+			close(stateChan)
 		}()
 		return stateChan, nil
 	}
@@ -212,6 +235,8 @@ func resolveDefDepends(template *Template, state State, repo *DefinitionReposito
 		return nil, err
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	errChan := make(chan error)
 	go func() {
 		for newState := range pickDefStateChan {
@@ -220,16 +245,24 @@ func resolveDefDepends(template *Template, state State, repo *DefinitionReposito
 				errChan <- err
 				return
 			}
+			wg.Add(1)
 			go func() {
 				for satisfiedState := range satisfiedStateChan {
 					stateChan <- satisfiedState
 				}
+				wg.Done()
 			}()
 		}
+		wg.Done()
 	}()
 
 	go func() {
-		panic(<-errChan) // FIXME
+		panic(<-errChan) // FIXME goroutine leak
+	}()
+
+	go func() {
+		wg.Wait()
+		close(stateChan)
 	}()
 
 	return stateChan, nil
@@ -284,6 +317,7 @@ func pickDef(defType DefinitionType, state State, repo *DefinitionRepository) (c
 		if err := eg.Wait(); err != nil {
 			panic(err) // FIXME
 		}
+		close(stateChan)
 	}()
 	return stateChan, nil
 }
