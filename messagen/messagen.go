@@ -11,6 +11,7 @@ type Definition struct {
 	Constraints    map[string]string
 	Alias          map[string]string
 	AllowDuplicate bool
+	OrderBy        []string
 	Weight         float32
 }
 
@@ -33,8 +34,16 @@ func (d *Definition) toRawDefinition() (*internal.RawDefinition, error) {
 		RawTemplates:   rawTemplates,
 		Constraints:    constraints,
 		AllowDuplicate: d.AllowDuplicate,
+		OrderBy:        d.getOrderBy(),
 		Weight:         internal.DefinitionWeight(d.Weight),
 	}, nil
+}
+
+func (d *Definition) getOrderBy() (orderBy []internal.DefinitionType) {
+	for _, o := range d.OrderBy {
+		orderBy = append(orderBy, internal.DefinitionType(o))
+	}
+	return
 }
 
 var defaultTemplatePickers = []internal.TemplatePicker{internal.RandomTemplatePicker}

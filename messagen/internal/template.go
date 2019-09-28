@@ -11,29 +11,64 @@ import (
 
 type RawTemplate string
 
-func (r RawTemplate) extractDefRefIDFromRawTemplate() (defRefIDList []DefinitionType) {
+func (r RawTemplate) extractDefRefIDFromRawTemplate() (defTypes DefinitionTypes) {
 	re := regexp.MustCompile(`\{\{\.(.*?)\}\}`)
 	for _, match := range re.FindAllStringSubmatch(string(r), -1) {
-		defRefIDList = append(defRefIDList, DefinitionType(match[1]))
+		defTypes = append(defTypes, DefinitionType(match[1]))
 	}
 	return
 }
 
+type DefinitionTypes []DefinitionType
+
+func (d *DefinitionTypes) popByIndex(index int) DefinitionType {
+	def := (*d)[index]
+	d.deleteByIndex(index)
+	return def
+}
+
+func (d *DefinitionTypes) deleteByIndex(i int) {
+	if i == 0 {
+		*d = (*d)[1:]
+		return
+	}
+	if len(*d)-1 == i {
+		*d = (*d)[:len(*d)-1]
+		return
+	}
+	*d = append((*d)[:i], (*d)[i+1:]...)
+}
+
+func (d *DefinitionTypes) sortByOrderBy(orderBy DefinitionTypes) {
+	var defs []DefinitionType
+	for _, o := range orderBy {
+		for i, def := range *d {
+			if def == o {
+				defs = append(defs, d.popByIndex(i))
+			}
+		}
+	}
+	*d = append(defs, *d...)
+}
+
 type Template struct {
 	Raw     RawTemplate
-	Depends []DefinitionType
+	Depends *DefinitionTypes
 	tmpl    *template.Template
 }
 
-func NewTemplate(rawTemplate RawTemplate) (*Template, error) {
-	ids := rawTemplate.extractDefRefIDFromRawTemplate()
+func NewTemplate(rawTemplate RawTemplate, orderBy []DefinitionType) (*Template, error) {
+	defTypes := rawTemplate.extractDefRefIDFromRawTemplate()
 	tmpl, err := template.New(string(rawTemplate)).Parse(string(rawTemplate))
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create new template: %w", err)
 	}
+
+	defTypes.sortByOrderBy(orderBy)
+
 	return &Template{
 		Raw:     rawTemplate,
-		Depends: ids,
+		Depends: &defTypes,
 		tmpl:    tmpl,
 	}, err
 }
@@ -52,7 +87,7 @@ func (t *Template) IsSatisfiedState(state State) bool {
 }
 
 func (t *Template) GetFirstUnsatisfiedDef(state State) (DefinitionType, bool) {
-	for _, defType := range t.Depends {
+	for _, defType := range *t.Depends {
 		if _, ok := state.Get(defType); ok {
 			continue
 		}
@@ -63,10 +98,10 @@ func (t *Template) GetFirstUnsatisfiedDef(state State) (DefinitionType, bool) {
 
 type Templates []*Template
 
-func NewTemplates(rawTemplates []RawTemplate) (Templates, error) {
+func NewTemplates(rawTemplates []RawTemplate, orderBy []DefinitionType) (Templates, error) {
 	var templates []*Template
 	for _, rawTemplate := range rawTemplates {
-		t, err := NewTemplate(rawTemplate)
+		t, err := NewTemplate(rawTemplate, orderBy)
 		if err != nil {
 			return nil, xerrors.Errorf("failed to create Templates: %w", err)
 		}
@@ -103,5 +138,5 @@ func (t *Templates) Copy() (Templates, error) {
 	for _, tmpl := range *t {
 		newRawTemplates = append(newRawTemplates, tmpl.Raw)
 	}
-	return NewTemplates(newRawTemplates)
+	return NewTemplates(newRawTemplates, nil)
 }

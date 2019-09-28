@@ -329,7 +329,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 }
 
 func TestRandomTemplatePicker(t *testing.T) {
-	argTemplates := newTemplatesOrPanic("a")
+	argTemplates := newTemplatesOrPanic(nil, "a")
 	type args struct {
 		templates *Templates
 		state     State
@@ -346,7 +346,7 @@ func TestRandomTemplatePicker(t *testing.T) {
 				templates: &argTemplates,
 				state:     State{},
 			},
-			want:    newTemplatesOrPanic("a"),
+			want:    newTemplatesOrPanic(nil, "a"),
 			wantErr: false,
 		},
 	}

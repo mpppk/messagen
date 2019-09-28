@@ -190,7 +190,7 @@ func resolveTemplates(templates Templates, state State, repo *DefinitionReposito
 	for _, defTemplate := range templates {
 		defTemplate := defTemplate
 		eg.Go(func() error {
-			if len(defTemplate.Depends) == 0 {
+			if len(*defTemplate.Depends) == 0 {
 				messageChan <- Message(defTemplate.Raw)
 				return nil
 			}
