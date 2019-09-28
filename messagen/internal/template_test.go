@@ -6,16 +6,16 @@ import (
 	"text/template"
 )
 
-func newTemplateOrPanic(rawTemplate RawTemplate) *Template {
-	t, err := NewTemplate(rawTemplate)
+func newTemplateOrPanic(rawTemplate RawTemplate, orderBy []DefinitionType) *Template {
+	t, err := NewTemplate(rawTemplate, orderBy)
 	if err != nil {
 		panic(err)
 	}
 	return t
 }
 
-func newTemplatesOrPanic(rawTemplates ...RawTemplate) Templates {
-	templates, err := NewTemplates(rawTemplates)
+func newTemplatesOrPanic(orderBy []DefinitionType, rawTemplates ...RawTemplate) Templates {
+	templates, err := NewTemplates(rawTemplates, orderBy)
 	if err != nil {
 		panic(err)
 	}
@@ -24,20 +24,20 @@ func newTemplatesOrPanic(rawTemplates ...RawTemplate) Templates {
 
 func TestRawTemplate_extractDefRefIDFromRawTemplate(t *testing.T) {
 	tests := []struct {
-		name             string
-		r                RawTemplate
-		wantDefRefIDList []DefinitionType
+		name            string
+		r               RawTemplate
+		wantDefRefTypes DefinitionTypes
 	}{
 		{
-			name:             "should extract RefID",
-			r:                "{{.id1}}test{{.id2}}",
-			wantDefRefIDList: []DefinitionType{"id1", "id2"},
+			name:            "should extract RefID",
+			r:               "{{.id1}}test{{.id2}}",
+			wantDefRefTypes: DefinitionTypes{"id1", "id2"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotDefRefIDList := tt.r.extractDefRefIDFromRawTemplate(); !reflect.DeepEqual(gotDefRefIDList, tt.wantDefRefIDList) {
-				t.Errorf("RawTemplate.extractDefRefIDFromRawTemplate() = %v, want %v", gotDefRefIDList, tt.wantDefRefIDList)
+			if gotDefRefTypes := tt.r.extractDefRefIDFromRawTemplate(); !reflect.DeepEqual(gotDefRefTypes, tt.wantDefRefTypes) {
+				t.Errorf("RawTemplate.extractDefRefIDFromRawTemplate() = %v, want %v", gotDefRefTypes, tt.wantDefRefTypes)
 			}
 		})
 	}
@@ -46,6 +46,7 @@ func TestRawTemplate_extractDefRefIDFromRawTemplate(t *testing.T) {
 func TestNewTemplate(t *testing.T) {
 	type args struct {
 		rawTemplate RawTemplate
+		orderBy     []DefinitionType
 	}
 	tests := []struct {
 		name    string
@@ -60,13 +61,35 @@ func TestNewTemplate(t *testing.T) {
 			},
 			want: &Template{
 				Raw:     "{{.id1}}test{{.id2}}",
-				Depends: []DefinitionType{"id1", "id2"},
+				Depends: &DefinitionTypes{"id1", "id2"},
+			},
+		},
+		{
+			name: "should consider OrderBy",
+			args: args{
+				rawTemplate: "{{.id1}}test{{.id2}}",
+				orderBy:     DefinitionTypes{"id2", "id1"},
+			},
+			want: &Template{
+				Raw:     "{{.id1}}test{{.id2}}",
+				Depends: &DefinitionTypes{"id2", "id1"},
+			},
+		},
+		{
+			name: "should consider OrderBy",
+			args: args{
+				rawTemplate: "{{.id1}}{{.id2}}{{.id3}}",
+				orderBy:     DefinitionTypes{"id3", "id1"},
+			},
+			want: &Template{
+				Raw:     "{{.id1}}{{.id2}}{{.id3}}",
+				Depends: &DefinitionTypes{"id3", "id1", "id2"},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewTemplate(tt.args.rawTemplate)
+			got, err := NewTemplate(tt.args.rawTemplate, tt.args.orderBy)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewTemplate() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -108,15 +131,15 @@ func TestNewTemplates(t *testing.T) {
 				rawTemplates: []RawTemplate{"{{.id1}}", "{{.id2}}"},
 			},
 			want: Templates{
-				newTemplateOrPanic("{{.id1}}"),
-				newTemplateOrPanic("{{.id2}}"),
+				newTemplateOrPanic("{{.id1}}", nil),
+				newTemplateOrPanic("{{.id2}}", nil),
 			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewTemplates(tt.args.rawTemplates)
+			got, err := NewTemplates(tt.args.rawTemplates, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewTemplate() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -158,7 +181,7 @@ func TestTemplate_Execute(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r, err := NewTemplate(tt.fields.Raw)
+			r, err := NewTemplate(tt.fields.Raw, nil)
 			if err != nil {
 				t.Errorf("failed to create new template: error = %v", err)
 			}
@@ -186,35 +209,35 @@ func TestTemplates_DeleteByIndex(t *testing.T) {
 	}{
 		{
 			name: "Delete last one element",
-			t:    newTemplatesOrPanic("a"),
+			t:    newTemplatesOrPanic(nil, "a"),
 			args: args{
 				i: 0,
 			},
-			want: newTemplatesOrPanic(),
+			want: newTemplatesOrPanic(nil),
 		},
 		{
 			name: "Delete first element",
-			t:    newTemplatesOrPanic("a", "b", "c"),
+			t:    newTemplatesOrPanic(nil, "a", "b", "c"),
 			args: args{
 				i: 0,
 			},
-			want: newTemplatesOrPanic("b", "c"),
+			want: newTemplatesOrPanic(nil, "b", "c"),
 		},
 		{
 			name: "Delete middle element",
-			t:    newTemplatesOrPanic("a", "b", "c"),
+			t:    newTemplatesOrPanic(nil, "a", "b", "c"),
 			args: args{
 				i: 1,
 			},
-			want: newTemplatesOrPanic("a", "c"),
+			want: newTemplatesOrPanic(nil, "a", "c"),
 		},
 		{
 			name: "Delete last element",
-			t:    newTemplatesOrPanic("a", "b", "c"),
+			t:    newTemplatesOrPanic(nil, "a", "b", "c"),
 			args: args{
 				i: 2,
 			},
-			want: newTemplatesOrPanic("a", "b"),
+			want: newTemplatesOrPanic(nil, "a", "b"),
 		},
 	}
 	for _, tt := range tests {
@@ -245,13 +268,13 @@ func TestTemplates_PopRandom(t *testing.T) {
 	}{
 		{
 			name:   "",
-			t:      newTemplatesOrPanic("a"),
-			want:   newTemplateOrPanic("a"),
+			t:      newTemplatesOrPanic(nil, "a"),
+			want:   newTemplateOrPanic("a", nil),
 			wantOk: true,
 		},
 		{
 			name:   "",
-			t:      newTemplatesOrPanic(),
+			t:      newTemplatesOrPanic(nil),
 			want:   nil,
 			wantOk: false,
 		},

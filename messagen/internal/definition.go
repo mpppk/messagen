@@ -14,16 +14,18 @@ type RawDefinition struct {
 	Constraints    *Constraints
 	Alias          Alias
 	AllowDuplicate bool
+	OrderBy        []DefinitionType
 	Weight         DefinitionWeight
 }
 
 type Definition struct {
 	*RawDefinition
 	Templates Templates
+	OrderBy   []DefinitionType
 }
 
 func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
-	templates, err := NewTemplates(rawDefinition.RawTemplates)
+	templates, err := NewTemplates(rawDefinition.RawTemplates, nil)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create Definition: %w", err)
 	}
@@ -42,6 +44,7 @@ func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
 	return &Definition{
 		RawDefinition: rawDefinition,
 		Templates:     templates,
+		OrderBy:       rawDefinition.OrderBy,
 	}, nil
 }
 
