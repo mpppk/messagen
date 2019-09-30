@@ -19,40 +19,40 @@ func TestState_SetByConstraint(t *testing.T) {
 	}
 	tests := []struct {
 		name      string
-		s         State
+		s         *State
 		args      args
 		want      bool
-		wantState State
+		wantState *State
 		wantErr   bool
 	}{
 		{
 			name: "",
-			s:    State{"K1": "V1"},
+			s:    NewState(MessageMap{"K1": "V1"}),
 			args: args{
 				constraint: newConstraintOrPanic("K2", "V2"),
 			},
 			want:      false,
-			wantState: State{"K1": "V1"},
+			wantState: NewState(MessageMap{"K1": "V1"}),
 			wantErr:   false,
 		},
 		{
 			name: "",
-			s:    State{"K1": "V1"},
+			s:    NewState(MessageMap{"K1": "V1"}),
 			args: args{
 				constraint: newConstraintOrPanic("K2+", "V2"),
 			},
 			want:      true,
-			wantState: State{"K1": "V1", "K2": "V2"},
+			wantState: NewState(MessageMap{"K1": "V1", "K2": "V2"}),
 			wantErr:   false,
 		},
 		{
 			name: "",
-			s:    State{"K1": "V1"},
+			s:    NewState(MessageMap{"K1": "V1"}),
 			args: args{
 				constraint: newConstraintOrPanic("K1+", "V2"),
 			},
 			want:      false,
-			wantState: State{"K1": "V1"},
+			wantState: NewState(MessageMap{"K1": "V1"}),
 			wantErr:   false,
 		},
 	}
@@ -80,14 +80,14 @@ func TestState_SetByConstraints(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		s       State
+		s       *State
 		args    args
 		want    int
 		wantErr bool
 	}{
 		{
 			name: "",
-			s:    State{"K1": "V1"},
+			s:    NewState(MessageMap{"K1": "V1"}),
 			args: args{
 				constraints: newConstraintsOrPanic(RawConstraints{"K2+": "V2", "K3+": "V3"}),
 			},

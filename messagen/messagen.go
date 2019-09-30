@@ -9,10 +9,30 @@ type Definition struct {
 	Type           string
 	Templates      []string
 	Constraints    map[string]string
-	Alias          map[string]string
+	Aliases        map[string]*Alias
 	AllowDuplicate bool
 	OrderBy        []string
 	Weight         float32
+}
+
+type Alias struct {
+	ReferType      string
+	AllowDuplicate bool
+}
+
+func (a *Alias) toAlias() *internal.Alias {
+	return &internal.Alias{
+		ReferType:      internal.DefinitionType(a.ReferType),
+		AllowDuplicate: a.AllowDuplicate,
+	}
+}
+
+func newAliases(aliases map[string]*Alias) internal.Aliases {
+	newAliases := internal.Aliases{}
+	for key, alias := range aliases {
+		newAliases[internal.DefinitionType(key)] = alias.toAlias()
+	}
+	return newAliases
 }
 
 func (d *Definition) toRawDefinition() (*internal.RawDefinition, error) {
@@ -34,6 +54,7 @@ func (d *Definition) toRawDefinition() (*internal.RawDefinition, error) {
 		RawTemplates:   rawTemplates,
 		Constraints:    constraints,
 		AllowDuplicate: d.AllowDuplicate,
+		Aliases:        newAliases(d.Aliases),
 		OrderBy:        d.getOrderBy(),
 		Weight:         internal.DefinitionWeight(d.Weight),
 	}, nil
@@ -46,7 +67,7 @@ func (d *Definition) getOrderBy() (orderBy []internal.DefinitionType) {
 	return
 }
 
-var defaultTemplatePickers = []internal.TemplatePicker{internal.RandomTemplatePicker}
+var defaultTemplatePickers = []internal.TemplatePicker{internal.RandomTemplatePicker, internal.NotAllowAliasDuplicateTemplatePicker}
 
 type Messagen struct {
 	repo *internal.DefinitionRepository
@@ -92,10 +113,10 @@ func (m *Messagen) Generate(defType string, state map[string]string) (string, er
 	return string(msg), err
 }
 
-func newState(s map[string]string) internal.State {
-	state := internal.State{}
+func newState(s map[string]string) *internal.State {
+	state := internal.NewState(nil)
 	for key, value := range s {
-		state[key] = internal.Message(value)
+		state.Set(internal.DefinitionType(key), internal.Message(value))
 	}
 	return state
 }

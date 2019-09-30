@@ -11,7 +11,7 @@ import (
 
 type RawTemplate string
 
-func (r RawTemplate) extractDefRefIDFromRawTemplate() (defTypes DefinitionTypes) {
+func (r RawTemplate) extractDefRefTypeFromRawTemplate() (defTypes DefinitionTypes) {
 	re := regexp.MustCompile(`\{\{\.(.*?)\}\}`)
 	for _, match := range re.FindAllStringSubmatch(string(r), -1) {
 		defTypes = append(defTypes, DefinitionType(match[1]))
@@ -58,7 +58,7 @@ type Template struct {
 }
 
 func NewTemplate(rawTemplate RawTemplate, orderBy []DefinitionType) (*Template, error) {
-	defTypes := rawTemplate.extractDefRefIDFromRawTemplate()
+	defTypes := rawTemplate.extractDefRefTypeFromRawTemplate()
 	tmpl, err := template.New(string(rawTemplate)).Parse(string(rawTemplate))
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create new template: %w", err)
@@ -73,20 +73,20 @@ func NewTemplate(rawTemplate RawTemplate, orderBy []DefinitionType) (*Template, 
 	}, err
 }
 
-func (t *Template) Execute(state State) (Message, error) {
+func (t *Template) Execute(state *State) (Message, error) {
 	buf := &bytes.Buffer{}
-	if err := t.tmpl.Execute(buf, state); err != nil {
+	if err := t.tmpl.Execute(buf, state.m); err != nil {
 		return "", xerrors.Errorf("failed to execute template. template:%s  state:%#v : %w", t.Raw, state, err)
 	}
 	return Message(buf.String()), nil
 }
 
-func (t *Template) IsSatisfiedState(state State) bool {
+func (t *Template) IsSatisfiedState(state *State) bool {
 	_, ok := t.GetFirstUnsatisfiedDef(state)
 	return !ok
 }
 
-func (t *Template) GetFirstUnsatisfiedDef(state State) (DefinitionType, bool) {
+func (t *Template) GetFirstUnsatisfiedDef(state *State) (DefinitionType, bool) {
 	for _, defType := range *t.Depends {
 		if _, ok := state.Get(defType); ok {
 			continue
@@ -94,6 +94,10 @@ func (t *Template) GetFirstUnsatisfiedDef(state State) (DefinitionType, bool) {
 		return defType, true
 	}
 	return "", false
+}
+
+func (t *Template) Equals(template *Template) bool {
+	return t.Raw == template.Raw
 }
 
 type Templates []*Template
@@ -131,6 +135,30 @@ func (t *Templates) DeleteByIndex(i int) {
 		return
 	}
 	*t = append((*t)[:i], (*t)[i+1:]...)
+}
+
+func (t *Templates) Has(template *Template) bool {
+	for _, tmpl := range *t {
+		if tmpl.Equals(template) {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *Templates) Subtract(templateList ...*Template) Templates {
+	templates := Templates(templateList)
+	var newTemplates Templates
+	for _, tmpl := range *t {
+		if !(&templates).Has(tmpl) {
+			newTemplates = append(newTemplates, tmpl)
+		}
+	}
+	return newTemplates
+}
+
+func (t *Templates) Add(template *Template) {
+	*t = append(*t, template)
 }
 
 func (t *Templates) Copy() (Templates, error) {

@@ -4,13 +4,40 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type State map[string]Message
+type MessageMap map[string]Message
 
-func (s State) Set(defType DefinitionType, msg Message) {
-	s[string(defType)] = msg
+type State struct {
+	m               MessageMap
+	pickedTemplates map[DefinitionID]*Templates
+	aliases         map[DefinitionType][]DefinitionType
 }
 
-func (s State) SetByConstraint(constraint *Constraint) (bool, error) {
+func NewState(m MessageMap) *State {
+	if m == nil {
+		m = MessageMap{}
+	}
+	return &State{
+		m:               m,
+		pickedTemplates: map[DefinitionID]*Templates{},
+		aliases:         map[DefinitionType][]DefinitionType{},
+	}
+}
+
+func (s *State) Set(defType DefinitionType, msg Message) {
+	s.m[string(defType)] = msg
+}
+
+func (s *State) SetAlias(defType, aliasName DefinitionType, msg Message) {
+	s.m[string(aliasName)] = msg
+	aliasNames, ok := s.aliases[defType]
+	if ok {
+		s.aliases[defType] = append(aliasNames, aliasName)
+	} else {
+		s.aliases[defType] = []DefinitionType{aliasName}
+	}
+}
+
+func (s *State) SetByConstraint(constraint *Constraint) (bool, error) {
 	if !constraint.key.WillAddValue {
 		return false, nil
 	}
@@ -28,7 +55,7 @@ func (s State) SetByConstraint(constraint *Constraint) (bool, error) {
 	return true, nil
 }
 
-func (s State) SetByConstraints(constraints *Constraints) (int, error) {
+func (s *State) SetByConstraints(constraints *Constraints) (int, error) {
 	cnt := 0
 	for rKey, rValue := range constraints.raw {
 		constraint, err := NewConstraint(rKey, rValue)
@@ -47,15 +74,32 @@ func (s State) SetByConstraints(constraints *Constraints) (int, error) {
 	return cnt, nil
 }
 
-func (s State) Get(defType DefinitionType) (Message, bool) {
-	v, ok := s[string(defType)]
+func (s *State) AddPickedTemplate(defID DefinitionID, template *Template) {
+	templates, ok := s.pickedTemplates[defID]
+	if ok {
+		*templates = append(*templates, template)
+	} else {
+		s.pickedTemplates[defID] = &Templates{template}
+	}
+}
+
+func (s *State) Get(defType DefinitionType) (Message, bool) {
+	v, ok := s.m[string(defType)]
 	return v, ok
 }
 
-func (s State) Copy() State {
-	ns := State{}
-	for key, value := range s {
-		ns[key] = value
+func (s *State) IsPickedTemplate(defID DefinitionID, template *Template) bool {
+	templates, ok := s.pickedTemplates[defID]
+	if ok && templates.Has(template) {
+		return true
+	}
+	return false
+}
+
+func (s *State) Copy() *State {
+	ns := NewState(nil)
+	for key, value := range s.m {
+		ns.m[key] = value
 	}
 	return ns
 }

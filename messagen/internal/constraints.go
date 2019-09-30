@@ -80,7 +80,7 @@ func NewConstraint(rawKey RawConstraintKey, rawValue RawConstraintValue) (*Const
 	return &Constraint{key: key, value: value}, nil
 }
 
-func (c *Constraint) IsSatisfied(state State) bool {
+func (c *Constraint) IsSatisfied(state *State) bool {
 	msg, ok := state.Get(c.key.DefinitionType)
 
 	// ? operator check
@@ -146,7 +146,7 @@ func (c *Constraints) GetByDefinitionType(defType DefinitionType) (RawConstraint
 	return v, ok
 }
 
-func (c *Constraints) ListUnsatisfied(state State) (*Constraints, error) {
+func (c *Constraints) ListUnsatisfied(state *State) (*Constraints, error) {
 	unsatisfiedConstraints, err := NewConstraints(nil)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create new constraints: %w", err)
@@ -167,7 +167,7 @@ func (c *Constraints) ListUnsatisfied(state State) (*Constraints, error) {
 	return unsatisfiedConstraints, nil
 }
 
-func (c *Constraints) AreSatisfied(state State) (bool, error) {
+func (c *Constraints) AreSatisfied(state *State) (bool, error) {
 	constraints, err := c.ListUnsatisfied(state)
 	if err != nil {
 		return false, xerrors.Errorf("failed to check constraints: %w", err)

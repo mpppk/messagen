@@ -12,7 +12,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 	}
 	type args struct {
 		defType      DefinitionType
-		initialState State
+		initialState *State
 	}
 
 	tests := []struct {
@@ -208,7 +208,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			},
 			args: args{
 				defType:      "Test",
-				initialState: State{"k1": "v1"},
+				initialState: NewState(MessageMap{"k1": "v1"}),
 			},
 			want:    "aaadddccc",
 			wantErr: false,
@@ -238,7 +238,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			},
 			args: args{
 				defType:      "Test",
-				initialState: State{"K1": "V1", "K2": "V2"},
+				initialState: NewState(MessageMap{"K1": "V1", "K2": "V2"}),
 			},
 			want:    "aaabbbccc",
 			wantErr: false,
@@ -304,7 +304,7 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 			},
 			args: args{
 				defType:      "Test",
-				initialState: State{"K1": "V1"},
+				initialState: NewState(MessageMap{"K1": "V1"}),
 			},
 			want:    "aaabbbccc",
 			wantErr: false,
@@ -329,10 +329,13 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 }
 
 func TestRandomTemplatePicker(t *testing.T) {
-	argTemplates := newTemplatesOrPanic(nil, "a")
+	def := newDefinitionOrPanic(&RawDefinition{
+		Type:         "Test",
+		RawTemplates: []RawTemplate{"a"},
+	})
 	type args struct {
-		templates *Templates
-		state     State
+		def   *Definition
+		state *State
 	}
 	tests := []struct {
 		name    string
@@ -343,8 +346,8 @@ func TestRandomTemplatePicker(t *testing.T) {
 		{
 			name: "",
 			args: args{
-				templates: &argTemplates,
-				state:     State{},
+				def:   def,
+				state: NewState(nil),
 			},
 			want:    newTemplatesOrPanic(nil, "a"),
 			wantErr: false,
@@ -352,7 +355,7 @@ func TestRandomTemplatePicker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RandomTemplatePicker(tt.args.templates, tt.args.state)
+			got, err := RandomTemplatePicker(tt.args.def, tt.args.state)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RandomTemplatePicker() error = %v, wantErr %v", err, tt.wantErr)
 				return
