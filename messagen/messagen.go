@@ -30,7 +30,7 @@ func (a *Alias) toAlias() *internal.Alias {
 func newAliases(aliases map[string]*Alias) internal.Aliases {
 	newAliases := internal.Aliases{}
 	for key, alias := range aliases {
-		newAliases[internal.DefinitionType(key)] = alias.toAlias()
+		newAliases[internal.AliasName(key)] = alias.toAlias()
 	}
 	return newAliases
 }

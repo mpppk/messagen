@@ -6,10 +6,46 @@ import (
 
 type MessageMap map[string]Message
 
+func (m MessageMap) copy() MessageMap {
+	newM := MessageMap{}
+	for key, value := range m {
+		newM[key] = value
+	}
+	return newM
+}
+
+type PickedTemplateMap map[DefinitionID]*Templates
+
+func (p PickedTemplateMap) copy() (PickedTemplateMap, error) {
+	newP := PickedTemplateMap{}
+	for id, templates := range p {
+		newTemplates, err := templates.Copy()
+		if err != nil {
+			return nil, err
+		}
+		newP[id] = &newTemplates
+	}
+	return newP, nil
+}
+
+type AliasName string
+
+type AliasMap map[DefinitionID][]AliasName
+
+func (a AliasMap) copy() AliasMap {
+	newA := AliasMap{}
+	for defType, aliasNames := range a {
+		copiedAliasNames := make([]AliasName, len(aliasNames))
+		copy(copiedAliasNames, aliasNames)
+		newA[defType] = copiedAliasNames
+	}
+	return newA
+}
+
 type State struct {
 	m               MessageMap
-	pickedTemplates map[DefinitionID]*Templates
-	aliases         map[DefinitionType][]DefinitionType
+	pickedTemplates PickedTemplateMap
+	aliases         AliasMap
 }
 
 func NewState(m MessageMap) *State {
@@ -18,8 +54,8 @@ func NewState(m MessageMap) *State {
 	}
 	return &State{
 		m:               m,
-		pickedTemplates: map[DefinitionID]*Templates{},
-		aliases:         map[DefinitionType][]DefinitionType{},
+		pickedTemplates: PickedTemplateMap{},
+		aliases:         AliasMap{},
 	}
 }
 
@@ -27,13 +63,13 @@ func (s *State) Set(defType DefinitionType, msg Message) {
 	s.m[string(defType)] = msg
 }
 
-func (s *State) SetAlias(defType, aliasName DefinitionType, msg Message) {
+func (s *State) SetAlias(defID DefinitionID, aliasName AliasName, msg Message) {
 	s.m[string(aliasName)] = msg
-	aliasNames, ok := s.aliases[defType]
+	aliasNames, ok := s.aliases[defID]
 	if ok {
-		s.aliases[defType] = append(aliasNames, aliasName)
+		s.aliases[defID] = append(aliasNames, aliasName)
 	} else {
-		s.aliases[defType] = []DefinitionType{aliasName}
+		s.aliases[defID] = []AliasName{aliasName}
 	}
 }
 
@@ -74,6 +110,26 @@ func (s *State) SetByConstraints(constraints *Constraints) (int, error) {
 	return cnt, nil
 }
 
+func (s *State) SetByDef(def *Definition, aliasName AliasName, msg Message) error {
+	if aliasName == "" {
+		s.Set(def.Type, msg)
+	} else {
+		s.SetAlias(def.ID, aliasName, msg)
+	}
+	if _, err := s.SetByConstraints(def.Constraints); err != nil {
+		return xerrors.Errorf("failed to update state while message generating: %w", err)
+	}
+	return nil
+}
+
+func (s *State) Update(def *Definition, pickedTemplate *Template, aliasName AliasName, msg Message) error {
+	if err := s.SetByDef(def, aliasName, msg); err != nil {
+		return err
+	}
+	s.AddPickedTemplate(def.ID, pickedTemplate)
+	return nil
+}
+
 func (s *State) AddPickedTemplate(defID DefinitionID, template *Template) {
 	templates, ok := s.pickedTemplates[defID]
 	if ok {
@@ -97,9 +153,13 @@ func (s *State) IsPickedTemplate(defID DefinitionID, template *Template) bool {
 }
 
 func (s *State) Copy() *State {
-	ns := NewState(nil)
-	for key, value := range s.m {
-		ns.m[key] = value
+	ns := NewState(s.m.copy())
+	pickedTemplates, err := s.pickedTemplates.copy()
+	if err != nil {
+		panic(err) // FIXME
 	}
+	ns.pickedTemplates = pickedTemplates
+	ns.aliases = s.aliases.copy()
+
 	return ns
 }

@@ -12,10 +12,10 @@ type Alias struct {
 	AllowDuplicate bool
 }
 
-type Aliases map[DefinitionType]*Alias
+type Aliases map[AliasName]*Alias
 
 func (a Aliases) IsAlias(defType DefinitionType) bool {
-	_, ok := a[defType]
+	_, ok := a[AliasName(defType)]
 	return ok
 }
 
@@ -69,8 +69,7 @@ func (d *Definition) CanBePicked(state *State) (bool, error) {
 }
 
 func (d *Definition) IsAlias(defType DefinitionType) bool {
-	_, ok := d.Aliases[defType]
-	return ok
+	return d.Aliases.IsAlias(defType)
 }
 
 func (d *Definition) Copy() (*Definition, error) {

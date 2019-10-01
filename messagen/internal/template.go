@@ -51,6 +51,12 @@ func (d *DefinitionTypes) sortByOrderBy(orderBy DefinitionTypes) {
 	*d = append(defs, *d...)
 }
 
+func (d *DefinitionTypes) copy() DefinitionTypes {
+	dst := make([]DefinitionType, len(*d))
+	copy(dst, *d)
+	return dst
+}
+
 type Template struct {
 	Raw     RawTemplate
 	Depends *DefinitionTypes
