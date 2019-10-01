@@ -6,9 +6,13 @@ import (
 )
 
 func newDefinitionsOrPanic(rawDefs ...*RawDefinition) Definitions {
-	definitions, err := NewDefinitions(rawDefs...)
-	if err != nil {
-		panic(err)
+	var definitions []*Definition
+	for _, rawDef := range rawDefs {
+		def, err := NewDefinition(rawDef)
+		if err != nil {
+			panic(err)
+		}
+		definitions = append(definitions, def)
 	}
 	return definitions
 }
@@ -19,7 +23,7 @@ func TestRandomWithWeightDefinitionPicker(t *testing.T) {
 			Type:           "Root",
 			RawTemplates:   []RawTemplate{"a"},
 			Constraints:    nil,
-			Alias:          nil,
+			Aliases:        nil,
 			AllowDuplicate: false,
 			Weight:         0,
 		},
@@ -27,14 +31,14 @@ func TestRandomWithWeightDefinitionPicker(t *testing.T) {
 			Type:           "Root",
 			RawTemplates:   []RawTemplate{"b"},
 			Constraints:    nil,
-			Alias:          nil,
+			Aliases:        nil,
 			AllowDuplicate: false,
 			Weight:         0,
 		},
 	}...)
 	type args struct {
 		definitions *Definitions
-		state       State
+		state       *State
 	}
 	tests := []struct {
 		name    string
@@ -46,7 +50,7 @@ func TestRandomWithWeightDefinitionPicker(t *testing.T) {
 			name: "",
 			args: args{
 				definitions: &definitions,
-				state:       State{},
+				state:       NewState(nil),
 			},
 			want:    definitions,
 			wantErr: false,

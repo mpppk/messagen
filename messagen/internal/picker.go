@@ -6,13 +6,14 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type TemplatePicker func(templates *Templates, state State) (Templates, error)
-type DefinitionPicker func(defs *Definitions, state State) ([]*Definition, error)
+type TemplatePicker func(def *Definition, state *State) (Templates, error)
+type DefinitionPicker func(defs *Definitions, state *State) ([]*Definition, error)
 
-func RandomTemplatePicker(templates *Templates, state State) (Templates, error) {
+func RandomTemplatePicker(def *Definition, state *State) (Templates, error) {
+	templates := def.Templates
 	var newTemplates Templates
 	for {
-		if len(*templates) == 0 {
+		if len(templates) == 0 {
 			break
 		}
 		tmpl, ok := templates.PopRandom()
@@ -24,7 +25,15 @@ func RandomTemplatePicker(templates *Templates, state State) (Templates, error) 
 	return newTemplates, nil
 }
 
-func RandomWithWeightDefinitionPicker(definitions *Definitions, state State) ([]*Definition, error) {
+func NotAllowAliasDuplicateTemplatePicker(def *Definition, state *State) (Templates, error) {
+	pickedTemplates, ok := state.pickedTemplates[def.ID]
+	if !ok {
+		return def.Templates, nil
+	}
+	return def.Templates.Subtract(*pickedTemplates...), nil
+}
+
+func RandomWithWeightDefinitionPicker(definitions *Definitions, state *State) ([]*Definition, error) {
 	var newDefinitions Definitions
 	for {
 		if len(*definitions) == 0 {

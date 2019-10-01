@@ -36,8 +36,8 @@ func TestRawTemplate_extractDefRefIDFromRawTemplate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotDefRefTypes := tt.r.extractDefRefIDFromRawTemplate(); !reflect.DeepEqual(gotDefRefTypes, tt.wantDefRefTypes) {
-				t.Errorf("RawTemplate.extractDefRefIDFromRawTemplate() = %v, want %v", gotDefRefTypes, tt.wantDefRefTypes)
+			if gotDefRefTypes := tt.r.extractDefRefTypeFromRawTemplate(); !reflect.DeepEqual(gotDefRefTypes, tt.wantDefRefTypes) {
+				t.Errorf("RawTemplate.extractDefRefTypeFromRawTemplate() = %v, want %v", gotDefRefTypes, tt.wantDefRefTypes)
 			}
 		})
 	}
@@ -158,7 +158,7 @@ func TestTemplate_Execute(t *testing.T) {
 		tmpl    *template.Template
 	}
 	type args struct {
-		state State
+		state *State
 	}
 	tests := []struct {
 		name    string
@@ -173,7 +173,7 @@ func TestTemplate_Execute(t *testing.T) {
 				Raw: "aaa{{.id1}}ccc",
 			},
 			args: args{
-				state: State{"id1": "bbb"},
+				state: NewState(MessageMap{"id1": "bbb"}),
 			},
 			want:    "aaabbbccc",
 			wantErr: false,
@@ -291,6 +291,44 @@ func TestTemplates_PopRandom(t *testing.T) {
 
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PopRandom() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTemplates_Subtract(t *testing.T) {
+	type args struct {
+		templateList []*Template
+	}
+	tests := []struct {
+		name string
+		t    Templates
+		args args
+		want Templates
+	}{
+		{
+			name: "",
+			t:    newTemplatesOrPanic(nil, "aaa", "bbb", "ccc"),
+			args: args{newTemplatesOrPanic(nil, "aaa")},
+			want: newTemplatesOrPanic(nil, "bbb", "ccc"),
+		},
+		{
+			name: "",
+			t:    newTemplatesOrPanic(nil, "aaa", "bbb", "ccc"),
+			args: args{newTemplatesOrPanic(nil, "bbb")},
+			want: newTemplatesOrPanic(nil, "aaa", "ccc"),
+		},
+		{
+			name: "",
+			t:    newTemplatesOrPanic(nil, "aaa", "bbb", "ccc"),
+			args: args{newTemplatesOrPanic(nil, "ccc")},
+			want: newTemplatesOrPanic(nil, "aaa", "bbb"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.t.Subtract(tt.args.templateList...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Templates.Subtract() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -5,14 +5,25 @@ import (
 )
 
 type DefinitionType string
+type DefinitionID int
 type DefinitionWeight float32
-type Alias map[DefinitionType]DefinitionType
+type Alias struct {
+	ReferType      DefinitionType
+	AllowDuplicate bool
+}
+
+type Aliases map[AliasName]*Alias
+
+func (a Aliases) IsAlias(defType DefinitionType) bool {
+	_, ok := a[AliasName(defType)]
+	return ok
+}
 
 type RawDefinition struct {
 	Type           DefinitionType
 	RawTemplates   []RawTemplate
 	Constraints    *Constraints
-	Alias          Alias
+	Aliases        Aliases
 	AllowDuplicate bool
 	OrderBy        []DefinitionType
 	Weight         DefinitionWeight
@@ -20,6 +31,7 @@ type RawDefinition struct {
 
 type Definition struct {
 	*RawDefinition
+	ID        DefinitionID
 	Templates Templates
 	OrderBy   []DefinitionType
 }
@@ -48,7 +60,7 @@ func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
 	}, nil
 }
 
-func (d *Definition) CanBePicked(state State) (bool, error) {
+func (d *Definition) CanBePicked(state *State) (bool, error) {
 	if ok, err := d.Constraints.AreSatisfied(state); err != nil {
 		return false, xerrors.Errorf("failed to check definition can be picked: %w", err)
 	} else {
@@ -56,19 +68,33 @@ func (d *Definition) CanBePicked(state State) (bool, error) {
 	}
 }
 
+func (d *Definition) IsAlias(defType DefinitionType) bool {
+	return d.Aliases.IsAlias(defType)
+}
+
+func (d *Definition) Copy() (*Definition, error) {
+	def := *d
+	templates, err := def.Templates.Copy()
+	if err != nil {
+		return nil, err
+	}
+	def.Templates = templates
+	return &def, nil
+}
+
 type Definitions []*Definition
 
-func NewDefinitions(rawDefs ...*RawDefinition) (Definitions, error) {
-	var definitions Definitions
-	for _, rawDef := range rawDefs {
-		def, err := NewDefinition(rawDef)
-		if err != nil {
-			return nil, xerrors.Errorf("failed to create new definitions: %w", err)
-		}
-		definitions = append(definitions, def)
-	}
-	return definitions, nil
-}
+//func NewDefinitions(rawDefs ...*RawDefinition) (Definitions, error) {
+//	var definitions Definitions
+//	for _, rawDef := range rawDefs {
+//		def, err := NewDefinition(rawDef)
+//		if err != nil {
+//			return nil, xerrors.Errorf("failed to create new definitions: %w", err)
+//		}
+//		definitions = append(definitions, def)
+//	}
+//	return definitions, nil
+//}
 
 func (d *Definitions) PopByIndex(index int) *Definition {
 	def := (*d)[index]
@@ -89,9 +115,13 @@ func (d *Definitions) DeleteByIndex(i int) {
 }
 
 func (d *Definitions) Copy() (Definitions, error) {
-	var newRawDefinitions []*RawDefinition
+	var newDefinitions []*Definition
 	for _, definition := range *d {
-		newRawDefinitions = append(newRawDefinitions, definition.RawDefinition)
+		newDef, err := definition.Copy()
+		if err != nil {
+			return nil, err
+		}
+		newDefinitions = append(newDefinitions, newDef)
 	}
-	return NewDefinitions(newRawDefinitions...)
+	return newDefinitions, nil
 }

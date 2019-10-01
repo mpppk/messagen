@@ -22,7 +22,7 @@ func newConstraintsOrPanic(raw RawConstraints) *Constraints {
 
 func TestDefinition_CanBePicked(t *testing.T) {
 	type args struct {
-		state State
+		state *State
 	}
 	tests := []struct {
 		name       string
@@ -38,13 +38,13 @@ func TestDefinition_CanBePicked(t *testing.T) {
 					Type:           "Root",
 					RawTemplates:   []RawTemplate{""},
 					Constraints:    newConstraintsOrPanic(RawConstraints{"Key": "Value"}),
-					Alias:          Alias{},
+					Aliases:        Aliases{},
 					AllowDuplicate: false,
 					Weight:         0,
 				},
 			),
 			args: args{
-				state: State{"Key": "Value"},
+				state: NewState(MessageMap{"Key": "Value"}),
 			},
 			want: true,
 			//want1: "",
@@ -56,13 +56,13 @@ func TestDefinition_CanBePicked(t *testing.T) {
 					Type:           "Root",
 					RawTemplates:   []RawTemplate{""},
 					Constraints:    newConstraintsOrPanic(RawConstraints{"Key": "Value"}),
-					Alias:          Alias{},
+					Aliases:        Aliases{},
 					AllowDuplicate: false,
 					Weight:         0,
 				},
 			),
 			args: args{
-				state: State{"Key": "OtherValue"},
+				state: NewState(MessageMap{"Key": "OtherValue"}),
 			},
 			want: false,
 			//want1: "",
