@@ -1,0 +1,15 @@
+Definitions:
+  - Type: Root
+    Templates: ["{{.Pronoun}} is {{.FirstName}} {{.LastName}}."]
+  - Type: Pronoun
+    Templates: ["He"]
+  - Type: Pronoun
+    Templates: ["She"]
+  - Type: FirstName
+    Templates: ["Liam", "James", "Benjamin"]
+    Constraints: {"Gender+": "Male"}
+  - Type: FirstName
+    Templates: ["Emily", "Charlotte", "Sofia"]
+    Constraints: {"Gender+": "Female"}
+  - Type: LastName
+    Templates: ["Smith", "Williams", "Brown"]

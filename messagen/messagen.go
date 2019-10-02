@@ -6,13 +6,13 @@ import (
 )
 
 type Definition struct {
-	Type           string
-	Templates      []string
-	Constraints    map[string]string
-	Aliases        map[string]*Alias
-	AllowDuplicate bool
-	OrderBy        []string
-	Weight         float32
+	Type           string            `yaml:"Type"`
+	Templates      []string          `yaml:"Templates"`
+	Constraints    map[string]string `yaml:"Constraints"`
+	Aliases        map[string]*Alias `yaml:"Aliases"`
+	AllowDuplicate bool              `yaml:"AllowDuplicate"`
+	OrderBy        []string          `yaml:"OrderBy"`
+	Weight         float32           `yaml:"Weight"`
 }
 
 type Alias struct {
