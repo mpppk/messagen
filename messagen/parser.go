@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	Definitions []Definition `yaml:"Definitions"`
+	Definitions []*Definition `yaml:"Definitions"`
 }
 
 func ParseYamlFile(filePath string) (*Config, error) {
@@ -21,7 +21,7 @@ func ParseYamlFile(filePath string) (*Config, error) {
 }
 
 func ParseYaml(contents []byte) (*Config, error) {
-	config := Config{Definitions: []Definition{}}
+	config := Config{Definitions: []*Definition{}}
 	if err := yaml.Unmarshal(contents, &config); err != nil {
 		return nil, xerrors.Errorf("failed to parse yaml: %w", err)
 	}

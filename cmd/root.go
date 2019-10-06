@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mpppk/messagen/internal/option"
 	"github.com/spf13/afero"
 
 	"github.com/mitchellh/go-homedir"
@@ -14,45 +13,31 @@ import (
 
 var cfgFile string
 
-func newToggleFlag() *option.BoolFlag {
-	return &option.BoolFlag{
-		Flag: &option.Flag{
-			Name:  "toggle",
-			Usage: "Do nothing",
-		},
-		Value: false,
-	}
-}
-
 func NewRootCmd(fs afero.Fs) (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use:   "messagen",
-		Short: "messagen",
+		Use:          "messagen",
+		Short:        "messagen",
+		SilenceUsage: true,
 	}
 
-	configFlag := &option.StringFlag{
-		Flag: &option.Flag{
-			Name:         "config",
-			IsPersistent: true,
-			Usage:        "config file (default is $HOME/.messagen.yaml)",
-		},
-	}
-
-	if err := option.RegisterStringFlag(cmd, configFlag); err != nil {
+	if err := setFlags(cmd, fs); err != nil {
 		return nil, err
 	}
 
+	return cmd, nil
+}
+
+func setFlags(cmd *cobra.Command, fs afero.Fs) error {
 	var subCmds []*cobra.Command
 	for _, cmdGen := range cmdGenerators {
 		subCmd, err := cmdGen(fs)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		subCmds = append(subCmds, subCmd)
 	}
 	cmd.AddCommand(subCmds...)
-
-	return cmd, nil
+	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -63,7 +48,6 @@ func Execute() {
 		panic(err)
 	}
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }
