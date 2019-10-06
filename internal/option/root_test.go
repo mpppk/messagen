@@ -9,32 +9,32 @@ import (
 
 func Test_newCmdConfigFromRawConfig(t *testing.T) {
 	type args struct {
-		rawConfig *option.CmdRawConfig
+		rawConfig *option.RootCmdRawConfig
 	}
 	tests := []struct {
 		name string
 		args args
-		want *option.CmdConfig
+		want *option.RootCmdConfig
 	}{
 		{
-			name: "Toggle property should have false if CmdRawConfig has false",
+			name: "Toggle property should have false if RootCmdRawConfig has false",
 			args: args{
-				rawConfig: &option.CmdRawConfig{
+				rawConfig: &option.RootCmdRawConfig{
 					Toggle: false,
 				},
 			},
-			want: &option.CmdConfig{
+			want: &option.RootCmdConfig{
 				Toggle: false,
 			},
 		},
 		{
-			name: "Toggle property should have true if CmdRawConfig has true",
+			name: "Toggle property should have true if RootCmdRawConfig has true",
 			args: args{
-				rawConfig: &option.CmdRawConfig{
+				rawConfig: &option.RootCmdRawConfig{
 					Toggle: true,
 				},
 			},
-			want: &option.CmdConfig{
+			want: &option.RootCmdConfig{
 				Toggle: true,
 			},
 		},
@@ -42,7 +42,7 @@ func Test_newCmdConfigFromRawConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := option.NewCmdConfigFromRawConfig(tt.args.rawConfig); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newCmdConfigFromRawConfig() = %v, want %v", got, tt.want)
+				t.Errorf("newRootCmdConfigFromRawConfig() = %v, want %v", got, tt.want)
 			}
 		})
 	}

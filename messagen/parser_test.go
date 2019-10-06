@@ -21,7 +21,7 @@ func TestParseYaml(t *testing.T) {
 				filePath: "../testdata/hello.yaml",
 			},
 			want: &Config{
-				Definitions: []Definition{
+				Definitions: []*Definition{
 					{
 						Type:           "Root",
 						Templates:      []string{"hello"},

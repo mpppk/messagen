@@ -5,17 +5,15 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type CmdConfig struct {
-	Toggle bool
+type RootCmdConfig struct{}
+
+func NewRootCmdConfigFromViper() (*RootCmdConfig, error) {
+	rawConfig, err := newRootCmdRawConfig()
+	return newRootCmdConfigFromRawConfig(rawConfig), err
 }
 
-func NewRootCmdConfigFromViper() (*CmdConfig, error) {
-	rawConfig, err := newCmdRawConfig()
-	return newCmdConfigFromRawConfig(rawConfig), err
-}
-
-func newCmdRawConfig() (*CmdRawConfig, error) {
-	var conf CmdRawConfig
+func newRootCmdRawConfig() (*RootCmdRawConfig, error) {
+	var conf RootCmdRawConfig
 	if err := viper.Unmarshal(&conf); err != nil {
 		return nil, xerrors.Errorf("failed to unmarshal config from viper: %w", err)
 	}
@@ -26,16 +24,15 @@ func newCmdRawConfig() (*CmdRawConfig, error) {
 	return &conf, nil
 }
 
-func newCmdConfigFromRawConfig(rawConfig *CmdRawConfig) *CmdConfig {
-	return &CmdConfig{
-		Toggle: rawConfig.Toggle,
-	}
+func newRootCmdConfigFromRawConfig(rawConfig *RootCmdRawConfig) *RootCmdConfig {
+	return &RootCmdConfig{}
 }
 
-type CmdRawConfig struct {
-	Toggle bool
+type RootCmdRawConfig struct {
+	File     string
+	RootType string
 }
 
-func (c *CmdRawConfig) validate() error {
+func (c *RootCmdRawConfig) validate() error {
 	return nil
 }
