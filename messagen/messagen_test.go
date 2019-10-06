@@ -83,3 +83,18 @@ func Example() {
 	// She is Emily Smith.
 	// He is James Smith.
 }
+
+func ExampleParseYaml() {
+	contents := `
+Definitions:
+  - Type: Root
+    Templates: ["hello"]
+`
+
+	config, _ := messagen.ParseYaml([]byte(contents))
+	def := config.Definitions[0]
+	fmt.Println(def.Type, def.Templates[0])
+
+	// Output:
+	// Root hello
+}

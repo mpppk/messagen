@@ -38,13 +38,13 @@ func TestParseYaml(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseYaml(tt.args.filePath)
+			got, err := ParseYamlFile(tt.args.filePath)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseYaml() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ParseYamlFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ParseYaml() = %#v, want %#v", got, tt.want)
+				t.Errorf("ParseYamlFile() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}

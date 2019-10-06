@@ -1,7 +1,6 @@
 package messagen
 
 import (
-	"fmt"
 	"io/ioutil"
 
 	"golang.org/x/xerrors"
@@ -13,13 +12,16 @@ type Config struct {
 	Definitions []Definition `yaml:"Definitions"`
 }
 
-func ParseYaml(filePath string) (*Config, error) {
-	config := Config{Definitions: []Definition{}}
+func ParseYamlFile(filePath string) (*Config, error) {
 	contents, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to parse yaml: %w", err)
 	}
-	fmt.Println(string(contents))
+	return ParseYaml(contents)
+}
+
+func ParseYaml(contents []byte) (*Config, error) {
+	config := Config{Definitions: []Definition{}}
 	if err := yaml.Unmarshal(contents, &config); err != nil {
 		return nil, xerrors.Errorf("failed to parse yaml: %w", err)
 	}
