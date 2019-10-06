@@ -1,0 +1,4 @@
+Definitions:
+  - Type: Root
+    Templates: ["{{.aaa}} {{.bbb}}"]
+    OrderBy: ["bbb"]

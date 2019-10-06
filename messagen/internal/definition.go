@@ -33,11 +33,10 @@ type Definition struct {
 	*RawDefinition
 	ID        DefinitionID
 	Templates Templates
-	OrderBy   []DefinitionType
 }
 
 func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
-	templates, err := NewTemplates(rawDefinition.RawTemplates, nil)
+	templates, err := NewTemplates(rawDefinition.RawTemplates, rawDefinition.OrderBy)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create Definition: %w", err)
 	}
@@ -56,7 +55,6 @@ func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
 	return &Definition{
 		RawDefinition: rawDefinition,
 		Templates:     templates,
-		OrderBy:       rawDefinition.OrderBy,
 	}, nil
 }
 
@@ -74,7 +72,7 @@ func (d *Definition) IsAlias(defType DefinitionType) bool {
 
 func (d *Definition) Copy() (*Definition, error) {
 	def := *d
-	templates, err := def.Templates.Copy()
+	templates, err := def.Templates.Copy(def.OrderBy)
 	if err != nil {
 		return nil, err
 	}

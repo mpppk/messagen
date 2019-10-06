@@ -136,7 +136,7 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *St
 
 func (d *DefinitionRepository) applyTemplatePickers(def *Definition, state *State) (newTemplates Templates, err error) {
 	newDef := *def
-	newTemplates, err = def.Templates.Copy()
+	newTemplates, err = def.Templates.Copy(newDef.OrderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +206,7 @@ func resolveTemplates(def *Definition, aliasName AliasName, state *State, repo *
 	for _, defTemplate := range templates {
 		defTemplate := defTemplate
 		eg.Go(func() error {
-			newState := state.Copy()
+			newState := state.Copy(def.OrderBy)
 			if len(*defTemplate.Depends) == 0 {
 				if err := newState.Update(def, defTemplate, aliasName, Message(defTemplate.Raw)); err != nil {
 					return err

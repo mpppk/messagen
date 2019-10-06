@@ -16,13 +16,13 @@ type Definition struct {
 }
 
 type Alias struct {
-	ReferType      string
-	AllowDuplicate bool
+	Type           string `yaml:"Type"`
+	AllowDuplicate bool   `yaml:"AllowDuplicate"`
 }
 
 func (a *Alias) toAlias() *internal.Alias {
 	return &internal.Alias{
-		ReferType:      internal.DefinitionType(a.ReferType),
+		ReferType:      internal.DefinitionType(a.Type),
 		AllowDuplicate: a.AllowDuplicate,
 	}
 }
