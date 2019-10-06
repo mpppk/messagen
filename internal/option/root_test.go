@@ -19,24 +19,16 @@ func Test_newCmdConfigFromRawConfig(t *testing.T) {
 		{
 			name: "Toggle property should have false if RootCmdRawConfig has false",
 			args: args{
-				rawConfig: &option.RootCmdRawConfig{
-					Toggle: false,
-				},
+				rawConfig: &option.RootCmdRawConfig{},
 			},
-			want: &option.RootCmdConfig{
-				Toggle: false,
-			},
+			want: &option.RootCmdConfig{},
 		},
 		{
 			name: "Toggle property should have true if RootCmdRawConfig has true",
 			args: args{
-				rawConfig: &option.RootCmdRawConfig{
-					Toggle: true,
-				},
+				rawConfig: &option.RootCmdRawConfig{},
 			},
-			want: &option.RootCmdConfig{
-				Toggle: true,
-			},
+			want: &option.RootCmdConfig{},
 		},
 	}
 	for _, tt := range tests {
