@@ -333,3 +333,30 @@ func TestTemplates_Subtract(t *testing.T) {
 		})
 	}
 }
+
+func TestDefinitionTypes_sortByOrderBy(t *testing.T) {
+	type args struct {
+		orderBy DefinitionTypes
+	}
+	tests := []struct {
+		name                string
+		d                   *DefinitionTypes
+		args                args
+		wantDefinitionTypes DefinitionTypes
+	}{
+		{
+			name:                "",
+			d:                   &DefinitionTypes{"aaa", "bbb"},
+			args:                args{DefinitionTypes{"bbb"}},
+			wantDefinitionTypes: DefinitionTypes{"bbb", "aaa"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.d.sortByOrderBy(tt.args.orderBy)
+			if !reflect.DeepEqual(*tt.d, tt.wantDefinitionTypes) {
+				t.Errorf("Templates.sortByOrderBy() = %v, want %v", tt.d, tt.wantDefinitionTypes)
+			}
+		})
+	}
+}

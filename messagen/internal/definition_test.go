@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -77,6 +78,53 @@ func TestDefinition_CanBePicked(t *testing.T) {
 			//if got1 != tt.want1 {
 			//	t.Errorf("Definition.CanBePicked() got1 = %v, want %v", got1, tt.want1)
 			//}
+		})
+	}
+}
+
+func TestNewDefinition(t *testing.T) {
+	type args struct {
+		rawDefinition *RawDefinition
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *Definition
+		wantErr bool
+	}{
+		{
+			name: "",
+			args: args{
+				rawDefinition: &RawDefinition{
+					Type:         "Root",
+					RawTemplates: []RawTemplate{"{{.aaa}} {{.bbb}}"},
+					OrderBy:      []DefinitionType{"bbb"},
+				},
+			},
+			want: &Definition{
+				RawDefinition: &RawDefinition{
+					Type:         "Root",
+					RawTemplates: []RawTemplate{"{{.aaa}} {{.bbb}}"},
+					OrderBy:      []DefinitionType{"bbb"},
+				},
+				ID:        0,
+				Templates: newTemplatesOrPanic([]DefinitionType{"bbb"}, "{{.aaa}} {{.bbb}}"),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewDefinition(tt.args.rawDefinition)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewDefinition() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !reflect.DeepEqual(got.Templates[0].Depends, tt.want.Templates[0].Depends) {
+				t.Errorf("NewDefinition() = %#v, want %v", *got, *tt.want)
+			}
+
 		})
 	}
 }

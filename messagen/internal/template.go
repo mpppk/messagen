@@ -167,10 +167,10 @@ func (t *Templates) Add(template *Template) {
 	*t = append(*t, template)
 }
 
-func (t *Templates) Copy() (Templates, error) {
+func (t *Templates) Copy(orderBy []DefinitionType) (Templates, error) {
 	var newRawTemplates []RawTemplate
 	for _, tmpl := range *t {
 		newRawTemplates = append(newRawTemplates, tmpl.Raw)
 	}
-	return NewTemplates(newRawTemplates, nil)
+	return NewTemplates(newRawTemplates, orderBy)
 }
