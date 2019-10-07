@@ -43,10 +43,13 @@ func newRunCmd(fs afero.Fs) (*cobra.Command, error) {
 				return err
 			}
 
-			if msg, err := generator.Generate(config.RootType, map[string]string{}); err != nil {
+			if msgs, err := generator.Generate(config.RootType, map[string]string{}, uint(config.Num)); err != nil {
 				return err
 			} else {
-				cmd.Println(msg)
+				for _, msg := range msgs {
+					cmd.Println(msg)
+					cmd.Println()
+				}
 			}
 
 			return nil
@@ -84,8 +87,25 @@ func setRunCmdFlags(cmd *cobra.Command, fs afero.Fs) error {
 		},
 	}
 
+	intFlags := []*option.IntFlag{
+		{
+			Flag: &option.Flag{
+				Name:      "num",
+				Shorthand: "n",
+				Usage:     "number of messages",
+			},
+			Value: 1,
+		},
+	}
+
 	for _, stringFlag := range stringFlags {
 		if err := option.RegisterStringFlag(cmd, stringFlag); err != nil {
+			return err
+		}
+	}
+
+	for _, intFlag := range intFlags {
+		if err := option.RegisterIntFlag(cmd, intFlag); err != nil {
 			return err
 		}
 	}

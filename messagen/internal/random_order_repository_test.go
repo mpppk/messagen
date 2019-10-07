@@ -67,13 +67,13 @@ func TestDefinitionRepository_Generate2(t *testing.T) {
 				t.Errorf("DefinitionRepository.Generate() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			got, err := d.Generate(tt.args.defType, tt.args.initialState)
+			got, err := d.Generate(tt.args.defType, tt.args.initialState, 1)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DefinitionRepository.Generate() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			for _, want := range tt.wantAnyOrder {
-				if !strings.Contains(string(got), string(want)) {
+				if !strings.Contains(string(got[0]), string(want)) {
 					t.Errorf("DefinitionRepository.Generate() = %v, want %v in any order", got, tt.wantAnyOrder)
 				}
 			}

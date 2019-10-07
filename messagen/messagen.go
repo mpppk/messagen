@@ -108,9 +108,16 @@ func (m *Messagen) AddDefinition(defs ...*Definition) error {
 	return nil
 }
 
-func (m *Messagen) Generate(defType string, state map[string]string) (string, error) {
-	msg, err := m.repo.Generate(internal.DefinitionType(defType), newState(state))
-	return string(msg), err
+func (m *Messagen) Generate(defType string, state map[string]string, num uint) ([]string, error) {
+	msgs, err := m.repo.Generate(internal.DefinitionType(defType), newState(state), num)
+	if err != nil {
+		return nil, err
+	}
+	var strMsgs []string
+	for _, msg := range msgs {
+		strMsgs = append(strMsgs, string(msg))
+	}
+	return strMsgs, err
 }
 
 func newState(s map[string]string) *internal.State {

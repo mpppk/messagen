@@ -68,15 +68,15 @@ func Example() {
 
 	// Generate method generate message according to added definitions.
 	// First argument represent definition Type of start point.
-	message, _ := generator.Generate("Root", nil)
+	messages, _ := generator.Generate("Root", nil, 1)
 
 	// Second argument represent initial state.
 	// In below code, Gender key is added with Female value as initial state.
 	// Therefore, Pronoun and FirstName definitions that have constraints which include Gender:Female are always picked.
-	femaleMessage, _ := generator.Generate("Root", map[string]string{"Gender": "Female"})
+	femaleMessages, _ := generator.Generate("Root", map[string]string{"Gender": "Female"}, 1)
 
-	maleMessage, _ := generator.Generate("Root", map[string]string{"Gender": "Male"})
-	fmt.Printf("%s\n%s\n%s\n", message, femaleMessage, maleMessage)
+	maleMessages, _ := generator.Generate("Root", map[string]string{"Gender": "Male"}, 1)
+	fmt.Printf("%s\n%s\n%s\n", messages[0], femaleMessages[0], maleMessages[0])
 
 	// Output
 	// She is Charlotte Williams.

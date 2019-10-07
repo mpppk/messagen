@@ -76,17 +76,46 @@ func (d *DefinitionRepository) addDefinition(def *Definition) {
 	return
 }
 
-func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *State) (Message, error) {
+func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *State, num uint) (messages []Message, err error) {
+	msgChan, errChan := d.Start(defType, initialState)
+
+	if num == 0 {
+		return nil, fmt.Errorf("failed to generate messages. num must be greater than 1")
+	}
+
+	for {
+		select {
+		case msg, ok := <-msgChan:
+			if !ok {
+				if len(messages) == 0 {
+					return nil, xerrors.Errorf("valid message does not exist")
+				} else {
+					return messages, nil
+				}
+			}
+			messages = append(messages, msg)
+			if len(messages) == int(num) {
+				return messages, nil
+			}
+		case err := <-errChan:
+			return nil, err
+		}
+	}
+}
+
+func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State) (msgChan chan Message, errChan chan error) {
+	msgChan = make(chan Message)
+	errChan = make(chan error)
 	if initialState == nil {
 		initialState = NewState(nil)
 	}
 	defs, err := d.pickDefinitions(defType, initialState)
 	if err != nil {
-		return "", xerrors.Errorf("failed to generate message: %w", err)
+		errChan <- xerrors.Errorf("failed to generate message: %w", err)
+		close(msgChan)
+		return
 	}
 
-	msgChan := make(chan Message)
-	errChan := make(chan error)
 	wg := sync.WaitGroup{}
 	for _, def := range defs {
 		wg.Add(1)
@@ -96,24 +125,26 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *St
 				errChan <- err
 				return
 			}
-			select {
-			case state, ok := <-stateChan:
-				if ok {
-					msg, ok := state.Get(defType)
-					if !ok {
-						errChan <- fmt.Errorf("error occurred in Generate. message not found. def type: %s", defType)
+			for {
+				select {
+				case state, ok := <-stateChan:
+					if ok {
+						msg, ok := state.Get(defType)
+						if !ok {
+							errChan <- fmt.Errorf("error occurred in Generate. message not found. def type: %s", defType)
+						}
+						msgChan <- msg
+					} else {
+						wg.Done()
+						return
 					}
-					msgChan <- msg
-				} else {
+				case err, ok := <-defErrChan:
+					if ok {
+						errChan <- err
+					}
 					wg.Done()
 					return
 				}
-			case err, ok := <-defErrChan:
-				if ok {
-					errChan <- err
-				}
-				wg.Done()
-				return
 			}
 		}(def)
 	}
@@ -123,15 +154,7 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *St
 		close(msgChan)
 	}()
 
-	select {
-	case msg, ok := <-msgChan:
-		if !ok {
-			return "", xerrors.Errorf("valid message does not exist")
-		}
-		return msg, nil
-	case err := <-errChan:
-		return "", err
-	}
+	return msgChan, errChan
 }
 
 func (d *DefinitionRepository) applyTemplatePickers(def *Definition, state *State) (newTemplates Templates, err error) {
@@ -182,17 +205,19 @@ func generate(def *Definition, aliasName AliasName, state *State, repo *Definiti
 
 	go func() {
 		subStateChan, templateErrChan := resolveTemplates(&newDef, aliasName, state, repo)
-		select {
-		case newState, ok := <-subStateChan:
-			if ok {
-				stateChan <- newState
-			} else {
-				close(stateChan)
-				return
-			}
-		case err, ok := <-templateErrChan:
-			if ok {
-				errChan <- err
+		for {
+			select {
+			case newState, ok := <-subStateChan:
+				if ok {
+					stateChan <- newState
+				} else {
+					close(stateChan)
+					return
+				}
+			case err, ok := <-templateErrChan:
+				if ok {
+					errChan <- err
+				}
 			}
 		}
 	}()
@@ -236,6 +261,7 @@ func resolveTemplates(def *Definition, aliasName AliasName, state *State, repo *
 		if err := eg.Wait(); err != nil {
 			errChan <- err
 		}
+
 		close(stateChan)
 	}()
 	return stateChan, errChan

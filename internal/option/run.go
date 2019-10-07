@@ -8,6 +8,7 @@ import (
 type RunCmdConfig struct {
 	FilePath string
 	RootType string
+	Num      int
 }
 
 func NewRunCmdConfigFromViper() (*RunCmdConfig, error) {
@@ -19,6 +20,7 @@ func newRunCmdConfigFromRawConfig(rawConfig *RunCmdRawConfig) *RunCmdConfig {
 	return &RunCmdConfig{
 		FilePath: rawConfig.File,
 		RootType: rawConfig.Root,
+		Num:      rawConfig.Num,
 	}
 }
 
@@ -34,4 +36,5 @@ func newRunCmdRawConfig() (*RunCmdRawConfig, error) {
 type RunCmdRawConfig struct {
 	File string
 	Root string
+	Num  int
 }
