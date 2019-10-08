@@ -28,7 +28,7 @@ Definitions:
     Templates: ["{{.CakeDescription}}かつ{{.AnotherCakeDescription}}"]
     Constraints: {"FoodCategory": "ケーキ"}
     Aliases:
-      AnotherCakeDescription: {"Type": CakeDescription, "AllowDuplicate": true}
+      AnotherCakeDescription: {"Type": CakeDescription, "AllowDuplicate": false}
 
   - Type: CakeDescription
     Templates: ["ふわふわ", "濃厚", "クリームたっぷり"]

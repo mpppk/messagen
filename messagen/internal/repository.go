@@ -13,7 +13,7 @@ import (
 type definitionMap map[DefinitionType][]*Definition
 type Message string
 
-func AscendingOrderTemplatePicker(def *Definition, aliasName AliasName, state *State) (Templates, error) {
+func AscendingOrderTemplatePicker(def *Definition, aliasName AliasName, alias *Alias, state *State) (Templates, error) {
 	return def.Templates, nil
 }
 
