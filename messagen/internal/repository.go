@@ -170,6 +170,7 @@ func (d *DefinitionRepository) applyTemplatePickers(def *Definition, state *Stat
 			return Templates{}, nil
 		}
 		newTemplates, err = picker(&newDef, state)
+		newDef.Templates = newTemplates
 		if err != nil {
 			return nil, err
 		}
@@ -248,10 +249,11 @@ func resolveTemplates(def *Definition, aliasName AliasName, state *State, repo *
 				if err != nil {
 					return err
 				}
-				if err := satisfiedState.Update(def, defTemplate, aliasName, msg); err != nil {
+				newSatisfiedState := satisfiedState.Copy(def.OrderBy)
+				if err := newSatisfiedState.Update(def, defTemplate, aliasName, msg); err != nil {
 					return err
 				}
-				stateChan <- satisfiedState
+				stateChan <- newSatisfiedState
 			}
 			return nil
 		})
@@ -349,16 +351,17 @@ func pickDef(defType DefinitionType, aliasName AliasName, state *State, repo *De
 				return errors.New("err chan is nil")
 			}
 
-			select {
-			case subState, ok := <-subStateChan:
-				if !ok {
-					return nil
+			for {
+				select {
+				case subState, ok := <-subStateChan:
+					if !ok {
+						return nil
+					}
+					stateChan <- subState
+				case err := <-defErrChan:
+					return err
 				}
-				stateChan <- subState
-			case err := <-defErrChan:
-				return err
 			}
-			return nil
 		})
 	}
 
