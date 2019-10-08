@@ -14,16 +14,19 @@ func (m MessageMap) copy() MessageMap {
 	return newM
 }
 
-type PickedTemplateMap map[DefinitionID]*Templates
+type PickedTemplateMap map[DefinitionID]map[AliasName]*Templates
 
 func (p PickedTemplateMap) copy(orderBy []DefinitionType) (PickedTemplateMap, error) {
 	newP := PickedTemplateMap{}
-	for id, templates := range p {
-		newTemplates, err := templates.Copy(orderBy)
-		if err != nil {
-			return nil, err
+	for id, aliasTemplates := range p {
+		newP[id] = map[AliasName]*Templates{}
+		for aliasName, templates := range aliasTemplates {
+			newTemplates, err := templates.Copy(orderBy)
+			if err != nil {
+				return nil, err
+			}
+			newP[id][aliasName] = &newTemplates
 		}
-		newP[id] = &newTemplates
 	}
 	return newP, nil
 }
@@ -126,17 +129,23 @@ func (s *State) Update(def *Definition, pickedTemplate *Template, aliasName Alia
 	if err := s.SetByDef(def, aliasName, msg); err != nil {
 		return err
 	}
-	s.AddPickedTemplate(def.ID, pickedTemplate)
+	s.AddPickedTemplate(def.ID, aliasName, pickedTemplate)
 	return nil
 }
 
-func (s *State) AddPickedTemplate(defID DefinitionID, template *Template) {
-	templates, ok := s.pickedTemplates[defID]
-	if ok {
-		*templates = append(*templates, template)
-	} else {
-		s.pickedTemplates[defID] = &Templates{template}
+func (s *State) AddPickedTemplate(defID DefinitionID, aliasName AliasName, template *Template) {
+	aliasTemplates, ok := s.pickedTemplates[defID]
+	if !ok {
+		aliasTemplates = map[AliasName]*Templates{}
 	}
+	_, ok = aliasTemplates[aliasName]
+	if ok {
+		t := append(*aliasTemplates[aliasName], template)
+		aliasTemplates[aliasName] = &t
+	} else {
+		aliasTemplates[aliasName] = &Templates{template}
+	}
+	s.pickedTemplates[defID] = aliasTemplates
 }
 
 func (s *State) Get(defType DefinitionType) (Message, bool) {
@@ -144,12 +153,19 @@ func (s *State) Get(defType DefinitionType) (Message, bool) {
 	return v, ok
 }
 
-func (s *State) IsPickedTemplate(defID DefinitionID, template *Template) bool {
-	templates, ok := s.pickedTemplates[defID]
+func (s *State) IsPickedTemplate(defID DefinitionID, aliasName AliasName, template *Template) bool {
+	aliasTemplates, ok := s.pickedTemplates[defID]
+	if !ok {
+		return false
+	}
+
+	templates, ok := aliasTemplates[aliasName]
 	if ok && templates.Has(template) {
 		return true
 	}
-	return false
+
+	templates, ok = aliasTemplates[""]
+	return ok && templates.Has(template)
 }
 
 func (s *State) Copy(orderBy []DefinitionType) *State {

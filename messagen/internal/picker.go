@@ -6,10 +6,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type TemplatePicker func(def *Definition, state *State) (Templates, error)
+type TemplatePicker func(def *Definition, aliasName AliasName, alias *Alias, state *State) (Templates, error)
 type DefinitionPicker func(defs *Definitions, state *State) ([]*Definition, error)
 
-func RandomTemplatePicker(def *Definition, state *State) (Templates, error) {
+func RandomTemplatePicker(def *Definition, aliasName AliasName, alias *Alias, state *State) (Templates, error) {
 	templates := def.Templates
 	var newTemplates Templates
 	for {
@@ -25,12 +25,27 @@ func RandomTemplatePicker(def *Definition, state *State) (Templates, error) {
 	return newTemplates, nil
 }
 
-func NotAllowAliasDuplicateTemplatePicker(def *Definition, state *State) (Templates, error) {
-	pickedTemplates, ok := state.pickedTemplates[def.ID]
+func NotAllowAliasDuplicateTemplatePicker(def *Definition, aliasName AliasName, alias *Alias, state *State) (Templates, error) {
+	if aliasName != "" && alias.AllowDuplicate {
+		return def.Templates, nil
+	}
+	aliasTemplates, ok := state.pickedTemplates[def.ID]
 	if !ok {
 		return def.Templates, nil
 	}
-	return def.Templates.Subtract(*pickedTemplates...), nil
+
+	var templates Templates
+	if templates1, ok := aliasTemplates[aliasName]; ok {
+		templates = *templates1
+	}
+	if templates2, ok2 := aliasTemplates[""]; ok2 {
+		templates = append(templates, *templates2...)
+	}
+	if !ok {
+		return def.Templates, nil
+	}
+
+	return def.Templates.Subtract(templates...), nil
 }
 
 func RandomWithWeightDefinitionPicker(definitions *Definitions, state *State) ([]*Definition, error) {
