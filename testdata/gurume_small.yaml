@@ -9,26 +9,14 @@ Definitions:
     OrderBy: ["FoodName"]
 
   - Type: FoodName
-    Templates: ["サーロインステーキ", "リブステーキ"]
-    Constraints: {"FoodCategory+": "肉", "Location+": "品川のhogeビル"}
-
-  - Type: FoodName
-    Templates: ["fugaハンバーグ"]
-    Constraints: {"FoodCategory+": "肉", "Location+": "丸の内のfugaビル"}
-
-  - Type: FoodName
-    Templates: ["いちごケーキ", "モンブラン", "ガトーショコラ"]
+    Templates: ["いちごケーキ", "モンブラン"]
     Constraints: {"FoodCategory+": "ケーキ", "Location+": "表参道のpiyoビル"}
-
-  - Type: FoodDescription
-    Templates: ["ジューシー", "ボリューミー"]
-    Constraints: {"FoodCategory": "肉"}
 
   - Type: FoodDescription
     Templates: ["{{.CakeDescription}}かつ{{.AnotherCakeDescription}}"]
     Constraints: {"FoodCategory": "ケーキ"}
     Aliases:
-      AnotherCakeDescription: {"Type": CakeDescription, "AllowDuplicate": false}
+      AnotherCakeDescription: {"Type": CakeDescription, "AllowDuplicate": true}
 
   - Type: CakeDescription
-    Templates: ["ふわふわ", "濃厚", "クリームたっぷり"]
+    Templates: ["ふわふわ", "濃厚"]

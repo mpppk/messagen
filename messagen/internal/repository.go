@@ -13,7 +13,7 @@ import (
 type definitionMap map[DefinitionType][]*Definition
 type Message string
 
-func AscendingOrderTemplatePicker(def *Definition, state *State) (Templates, error) {
+func AscendingOrderTemplatePicker(def *Definition, alias *Alias, state *State) (Templates, error) {
 	return def.Templates, nil
 }
 
@@ -76,44 +76,75 @@ func (d *DefinitionRepository) addDefinition(def *Definition) {
 	return
 }
 
-func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *State) (Message, error) {
+func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *State, num uint) (messages []Message, err error) {
+	msgChan, errChan := d.Start(defType, initialState)
+
+	if num == 0 {
+		return nil, fmt.Errorf("failed to generate messages. num must be greater than 1")
+	}
+
+	for {
+		select {
+		case msg, ok := <-msgChan:
+			if !ok {
+				if len(messages) == 0 {
+					return nil, xerrors.Errorf("valid message does not exist")
+				} else {
+					return messages, nil
+				}
+			}
+			messages = append(messages, msg)
+			if len(messages) == int(num) {
+				return messages, nil
+			}
+		case err := <-errChan:
+			return nil, err
+		}
+	}
+}
+
+func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State) (msgChan chan Message, errChan chan error) {
+	msgChan = make(chan Message)
+	errChan = make(chan error)
 	if initialState == nil {
 		initialState = NewState(nil)
 	}
 	defs, err := d.pickDefinitions(defType, initialState)
 	if err != nil {
-		return "", xerrors.Errorf("failed to generate message: %w", err)
+		errChan <- xerrors.Errorf("failed to generate message: %w", err)
+		close(msgChan)
+		return
 	}
 
-	msgChan := make(chan Message)
-	errChan := make(chan error)
 	wg := sync.WaitGroup{}
 	for _, def := range defs {
 		wg.Add(1)
 		go func(def *Definition) {
-			stateChan, defErrChan, err := generate(def, "", initialState, d)
+			stateChan, defErrChan, err := generate(def, "", nil, initialState, d)
 			if err != nil {
 				errChan <- err
 				return
 			}
-			select {
-			case state, ok := <-stateChan:
-				if ok {
-					msg, ok := state.Get(defType)
-					if !ok {
-						errChan <- fmt.Errorf("error occurred in Generate. message not found. def type: %s", defType)
+			for {
+				select {
+				case state, ok := <-stateChan:
+					if ok {
+						msg, ok := state.Get(defType)
+						if !ok {
+							errChan <- fmt.Errorf("error occurred in Generate. message not found. def type: %s", defType)
+						}
+						msgChan <- msg
+					} else {
+						wg.Done()
+						return
 					}
-					msgChan <- msg
-				} else {
+				case err, ok := <-defErrChan:
+					if ok {
+						errChan <- err
+					}
 					wg.Done()
 					return
 				}
-			case err, ok := <-defErrChan:
-				if ok {
-					errChan <- err
-				}
-				wg.Done()
-				return
 			}
 		}(def)
 	}
@@ -123,18 +154,10 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *St
 		close(msgChan)
 	}()
 
-	select {
-	case msg, ok := <-msgChan:
-		if !ok {
-			return "", xerrors.Errorf("valid message does not exist")
-		}
-		return msg, nil
-	case err := <-errChan:
-		return "", err
-	}
+	return msgChan, errChan
 }
 
-func (d *DefinitionRepository) applyTemplatePickers(def *Definition, state *State) (newTemplates Templates, err error) {
+func (d *DefinitionRepository) applyTemplatePickers(def *Definition, alias *Alias, state *State) (newTemplates Templates, err error) {
 	newDef := *def
 	newTemplates, err = def.Templates.Copy(newDef.OrderBy)
 	if err != nil {
@@ -146,7 +169,8 @@ func (d *DefinitionRepository) applyTemplatePickers(def *Definition, state *Stat
 		if len(newTemplates) == 0 {
 			return Templates{}, nil
 		}
-		newTemplates, err = picker(&newDef, state)
+		newTemplates, err = picker(&newDef, alias, state)
+		newDef.Templates = newTemplates
 		if err != nil {
 			return nil, err
 		}
@@ -169,10 +193,10 @@ func (d *DefinitionRepository) applyDefinitionPickers(defs Definitions, state *S
 	return newDefinitions, nil
 }
 
-func generate(def *Definition, aliasName AliasName, state *State, repo *DefinitionRepository) (chan *State, chan error, error) {
+func generate(def *Definition, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, chan error, error) {
 	stateChan := make(chan *State)
 	errChan := make(chan error)
-	templates, err := repo.applyTemplatePickers(def, state)
+	templates, err := repo.applyTemplatePickers(def, alias, state)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -182,17 +206,19 @@ func generate(def *Definition, aliasName AliasName, state *State, repo *Definiti
 
 	go func() {
 		subStateChan, templateErrChan := resolveTemplates(&newDef, aliasName, state, repo)
-		select {
-		case newState, ok := <-subStateChan:
-			if ok {
-				stateChan <- newState
-			} else {
-				close(stateChan)
-				return
-			}
-		case err, ok := <-templateErrChan:
-			if ok {
-				errChan <- err
+		for {
+			select {
+			case newState, ok := <-subStateChan:
+				if ok {
+					stateChan <- newState
+				} else {
+					close(stateChan)
+					return
+				}
+			case err, ok := <-templateErrChan:
+				if ok {
+					errChan <- err
+				}
 			}
 		}
 	}()
@@ -223,10 +249,11 @@ func resolveTemplates(def *Definition, aliasName AliasName, state *State, repo *
 				if err != nil {
 					return err
 				}
-				if err := satisfiedState.Update(def, defTemplate, aliasName, msg); err != nil {
+				newSatisfiedState := satisfiedState.Copy(def.OrderBy)
+				if err := newSatisfiedState.Update(def, defTemplate, aliasName, msg); err != nil {
 					return err
 				}
-				stateChan <- satisfiedState
+				stateChan <- newSatisfiedState
 			}
 			return nil
 		})
@@ -236,6 +263,7 @@ func resolveTemplates(def *Definition, aliasName AliasName, state *State, repo *
 		if err := eg.Wait(); err != nil {
 			errChan <- err
 		}
+
 		close(stateChan)
 	}()
 	return stateChan, errChan
@@ -258,7 +286,7 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 		aliasName = AliasName(defType)
 		defType = alias.ReferType
 	}
-	pickDefStateChan, err := pickDef(defType, aliasName, state, repo)
+	pickDefStateChan, err := pickDef(defType, aliasName, alias, state, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +324,7 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 	return stateChan, nil
 }
 
-func pickDef(defType DefinitionType, aliasName AliasName, state *State, repo *DefinitionRepository) (chan *State, error) {
+func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, error) {
 	candidateDefs, err := repo.pickDefinitions(defType, state)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to pick definitions")
@@ -310,7 +338,7 @@ func pickDef(defType DefinitionType, aliasName AliasName, state *State, repo *De
 		}
 		candidateDef := candidateDef
 		eg.Go(func() error {
-			subStateChan, defErrChan, err := generate(candidateDef, aliasName, state, repo)
+			subStateChan, defErrChan, err := generate(candidateDef, aliasName, alias, state, repo)
 			if err != nil {
 				return err
 			}
@@ -323,16 +351,17 @@ func pickDef(defType DefinitionType, aliasName AliasName, state *State, repo *De
 				return errors.New("err chan is nil")
 			}
 
-			select {
-			case subState, ok := <-subStateChan:
-				if !ok {
-					return nil
+			for {
+				select {
+				case subState, ok := <-subStateChan:
+					if !ok {
+						return nil
+					}
+					stateChan <- subState
+				case err := <-defErrChan:
+					return err
 				}
-				stateChan <- subState
-			case err := <-defErrChan:
-				return err
 			}
-			return nil
 		})
 	}
 

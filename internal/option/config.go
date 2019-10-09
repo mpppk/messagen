@@ -32,6 +32,12 @@ type StringFlag struct {
 	IsFileName bool
 }
 
+// IntFlag represents flag which can be specified as int
+type IntFlag struct {
+	*Flag
+	Value int
+}
+
 // BoolFlag represents flag which can be specified as bool
 type BoolFlag struct {
 	*Flag
@@ -72,6 +78,25 @@ func RegisterBoolFlag(cmd *cobra.Command, flagConfig *BoolFlag) error {
 		flagSet.Bool(flagConfig.Name, flagConfig.Value, flagConfig.Usage)
 	} else {
 		flagSet.BoolP(flagConfig.Name, flagConfig.Shorthand, flagConfig.Value, flagConfig.Usage)
+	}
+
+	if err := markAsRequired(cmd, flagConfig.Flag); err != nil {
+		return err
+	}
+
+	if err := viper.BindPFlag(flagConfig.getViperName(), flagSet.Lookup(flagConfig.Name)); err != nil {
+		return err
+	}
+	return nil
+}
+
+// RegisterIntFlag register bool flag to provided cmd and viper
+func RegisterIntFlag(cmd *cobra.Command, flagConfig *IntFlag) error {
+	flagSet := getFlagSet(cmd, flagConfig.Flag)
+	if flagConfig.Shorthand == "" {
+		flagSet.Int(flagConfig.Name, flagConfig.Value, flagConfig.Usage)
+	} else {
+		flagSet.IntP(flagConfig.Name, flagConfig.Shorthand, flagConfig.Value, flagConfig.Usage)
 	}
 
 	if err := markAsRequired(cmd, flagConfig.Flag); err != nil {
