@@ -13,7 +13,7 @@ import (
 type definitionMap map[DefinitionType][]*Definition
 type Message string
 
-func AscendingOrderTemplatePicker(def *Definition, state *State) (Templates, error) {
+func AscendingOrderTemplatePicker(def *Definition, alias *Alias, state *State) (Templates, error) {
 	return def.Templates, nil
 }
 
@@ -120,7 +120,7 @@ func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State
 	for _, def := range defs {
 		wg.Add(1)
 		go func(def *Definition) {
-			stateChan, defErrChan, err := generate(def, "", initialState, d)
+			stateChan, defErrChan, err := generate(def, "", nil, initialState, d)
 			if err != nil {
 				errChan <- err
 				return
@@ -157,7 +157,7 @@ func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State
 	return msgChan, errChan
 }
 
-func (d *DefinitionRepository) applyTemplatePickers(def *Definition, state *State) (newTemplates Templates, err error) {
+func (d *DefinitionRepository) applyTemplatePickers(def *Definition, alias *Alias, state *State) (newTemplates Templates, err error) {
 	newDef := *def
 	newTemplates, err = def.Templates.Copy(newDef.OrderBy)
 	if err != nil {
@@ -169,7 +169,7 @@ func (d *DefinitionRepository) applyTemplatePickers(def *Definition, state *Stat
 		if len(newTemplates) == 0 {
 			return Templates{}, nil
 		}
-		newTemplates, err = picker(&newDef, state)
+		newTemplates, err = picker(&newDef, alias, state)
 		newDef.Templates = newTemplates
 		if err != nil {
 			return nil, err
@@ -193,10 +193,10 @@ func (d *DefinitionRepository) applyDefinitionPickers(defs Definitions, state *S
 	return newDefinitions, nil
 }
 
-func generate(def *Definition, aliasName AliasName, state *State, repo *DefinitionRepository) (chan *State, chan error, error) {
+func generate(def *Definition, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, chan error, error) {
 	stateChan := make(chan *State)
 	errChan := make(chan error)
-	templates, err := repo.applyTemplatePickers(def, state)
+	templates, err := repo.applyTemplatePickers(def, alias, state)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -286,7 +286,7 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 		aliasName = AliasName(defType)
 		defType = alias.ReferType
 	}
-	pickDefStateChan, err := pickDef(defType, aliasName, state, repo)
+	pickDefStateChan, err := pickDef(defType, aliasName, alias, state, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +324,7 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 	return stateChan, nil
 }
 
-func pickDef(defType DefinitionType, aliasName AliasName, state *State, repo *DefinitionRepository) (chan *State, error) {
+func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, error) {
 	candidateDefs, err := repo.pickDefinitions(defType, state)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to pick definitions")
@@ -338,7 +338,7 @@ func pickDef(defType DefinitionType, aliasName AliasName, state *State, repo *De
 		}
 		candidateDef := candidateDef
 		eg.Go(func() error {
-			subStateChan, defErrChan, err := generate(candidateDef, aliasName, state, repo)
+			subStateChan, defErrChan, err := generate(candidateDef, aliasName, alias, state, repo)
 			if err != nil {
 				return err
 			}

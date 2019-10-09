@@ -1,0 +1,22 @@
+Definitions:
+  - Type: Root
+    Templates:
+      - |-
+        まじでこの世の全ての{{.FoodCategory}}好きに教えてあげたいんだが
+        {{.Location}}には全ての人間を虜にする禁断の{{.FoodName}}がある
+        これが{{.FoodDescription}}で超絶美味いからぜひ全国の{{.FoodCategory}}好き、
+        {{.FoodCategory}}を愛する者たち、{{.FoodCategory}}を憎む者たち、全ての{{.FoodCategory}}関係者に伝われ
+    OrderBy: ["FoodName"]
+
+  - Type: FoodName
+    Templates: ["いちごケーキ", "モンブラン"]
+    Constraints: {"FoodCategory+": "ケーキ", "Location+": "表参道のpiyoビル"}
+
+  - Type: FoodDescription
+    Templates: ["{{.CakeDescription}}かつ{{.AnotherCakeDescription}}"]
+    Constraints: {"FoodCategory": "ケーキ"}
+    Aliases:
+      AnotherCakeDescription: {"Type": CakeDescription, "AllowDuplicate": true}
+
+  - Type: CakeDescription
+    Templates: ["ふわふわ", "濃厚"]
