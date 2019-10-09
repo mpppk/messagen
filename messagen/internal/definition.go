@@ -14,7 +14,7 @@ type Alias struct {
 
 type Aliases map[AliasName]*Alias
 
-func (a Aliases) IsAliasName(defType DefinitionType) bool {
+func (a Aliases) IsAlias(defType DefinitionType) bool {
 	_, ok := a[AliasName(defType)]
 	return ok
 }
@@ -67,7 +67,7 @@ func (d *Definition) CanBePicked(state *State) (bool, error) {
 }
 
 func (d *Definition) IsAlias(defType DefinitionType) bool {
-	return d.Aliases.IsAliasName(defType)
+	return d.Aliases.IsAlias(defType)
 }
 
 func (d *Definition) Copy() (*Definition, error) {
