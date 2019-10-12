@@ -123,3 +123,9 @@ func (d *Definitions) Copy() (Definitions, error) {
 	}
 	return newDefinitions, nil
 }
+
+type DefinitionWithAlias struct {
+	*Definition
+	aliasName AliasName
+	alias     *Alias
+}

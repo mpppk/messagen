@@ -13,7 +13,7 @@ import (
 type definitionMap map[DefinitionType][]*Definition
 type Message string
 
-func AscendingOrderTemplatePicker(def *Definition, alias *Alias, state *State) (Templates, error) {
+func AscendingOrderTemplatePicker(def *DefinitionWithAlias, state *State) (Templates, error) {
 	return def.Templates, nil
 }
 
@@ -120,7 +120,12 @@ func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State
 	for _, def := range defs {
 		wg.Add(1)
 		go func(def *Definition) {
-			stateChan, defErrChan, err := generate(def, "", nil, initialState, d)
+			defWithAlias := &DefinitionWithAlias{
+				Definition: def,
+				aliasName:  "",
+				alias:      nil,
+			}
+			stateChan, defErrChan, err := generate(defWithAlias, initialState, d)
 			if err != nil {
 				errChan <- err
 				return
@@ -157,7 +162,7 @@ func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State
 	return msgChan, errChan
 }
 
-func (d *DefinitionRepository) applyTemplatePickers(def *Definition, alias *Alias, state *State) (newTemplates Templates, err error) {
+func (d *DefinitionRepository) applyTemplatePickers(def *DefinitionWithAlias, state *State) (newTemplates Templates, err error) {
 	newDef := *def
 	newTemplates, err = def.Templates.Copy(newDef.OrderBy)
 	if err != nil {
@@ -169,7 +174,7 @@ func (d *DefinitionRepository) applyTemplatePickers(def *Definition, alias *Alia
 		if len(newTemplates) == 0 {
 			return Templates{}, nil
 		}
-		newTemplates, err = picker(&newDef, alias, state)
+		newTemplates, err = picker(&newDef, state)
 		newDef.Templates = newTemplates
 		if err != nil {
 			return nil, err
@@ -193,10 +198,10 @@ func (d *DefinitionRepository) applyDefinitionPickers(defs Definitions, state *S
 	return newDefinitions, nil
 }
 
-func generate(def *Definition, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, chan error, error) {
+func generate(def *DefinitionWithAlias, state *State, repo *DefinitionRepository) (chan *State, chan error, error) {
 	stateChan := make(chan *State)
 	errChan := make(chan error)
-	templates, err := repo.applyTemplatePickers(def, alias, state)
+	templates, err := repo.applyTemplatePickers(def, state)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -205,7 +210,7 @@ func generate(def *Definition, aliasName AliasName, alias *Alias, state *State, 
 	newDef.Templates = templates
 
 	go func() {
-		subStateChan, templateErrChan := resolveTemplates(&newDef, aliasName, state, repo)
+		subStateChan, templateErrChan := resolveTemplates(&newDef, state, repo)
 		if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
 			errChan <- err
 		} else {
@@ -230,7 +235,7 @@ func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) e
 	}
 }
 
-func resolveTemplates(def *Definition, aliasName AliasName, state *State, repo *DefinitionRepository) (chan *State, chan error) {
+func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRepository) (chan *State, chan error) {
 	stateChan := make(chan *State)
 	eg := errgroup.Group{}
 	templates := def.Templates
@@ -239,7 +244,7 @@ func resolveTemplates(def *Definition, aliasName AliasName, state *State, repo *
 		eg.Go(func() error {
 			newState := state.Copy(def.OrderBy)
 			if len(*defTemplate.Depends) == 0 {
-				if err := newState.Update(def, defTemplate, aliasName, Message(defTemplate.Raw)); err != nil {
+				if err := newState.Update(def, defTemplate, Message(defTemplate.Raw)); err != nil {
 					return err
 				}
 				stateChan <- newState
@@ -255,7 +260,7 @@ func resolveTemplates(def *Definition, aliasName AliasName, state *State, repo *
 					return err
 				}
 				newSatisfiedState := satisfiedState.Copy(def.OrderBy)
-				if err := newSatisfiedState.Update(def, defTemplate, aliasName, msg); err != nil {
+				if err := newSatisfiedState.Update(def, defTemplate, msg); err != nil {
 					return err
 				}
 				stateChan <- newSatisfiedState
@@ -341,9 +346,15 @@ func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *S
 		if ok, _ := candidateDef.CanBePicked(state); !ok {
 			continue
 		}
+
 		candidateDef := candidateDef
+		candidateDefWithAlias := &DefinitionWithAlias{
+			Definition: candidateDef,
+			aliasName:  aliasName,
+			alias:      alias,
+		}
 		eg.Go(func() error {
-			subStateChan, defErrChan, err := generate(candidateDef, aliasName, alias, state, repo)
+			subStateChan, defErrChan, err := generate(candidateDefWithAlias, state, repo)
 			if err != nil {
 				return err
 			}

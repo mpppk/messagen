@@ -335,15 +335,13 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 }
 
 func TestRandomTemplatePicker(t *testing.T) {
-	def := newDefinitionOrPanic(&RawDefinition{
+	def := newDefinitionWithAliasOrPanic(&RawDefinition{
 		Type:         "Test",
 		RawTemplates: []RawTemplate{"a"},
-	})
+	}, "", nil)
 	type args struct {
-		def       *Definition
-		aliasName AliasName
-		alias     *Alias
-		state     *State
+		def   *DefinitionWithAlias
+		state *State
 	}
 	tests := []struct {
 		name    string
@@ -363,7 +361,7 @@ func TestRandomTemplatePicker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RandomTemplatePicker(tt.args.def, nil, tt.args.state)
+			got, err := RandomTemplatePicker(tt.args.def, tt.args.state)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RandomTemplatePicker() error = %v, wantErr %v", err, tt.wantErr)
 				return

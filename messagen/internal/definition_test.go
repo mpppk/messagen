@@ -5,6 +5,15 @@ import (
 	"testing"
 )
 
+func newDefinitionWithAliasOrPanic(rawDefinition *RawDefinition, aliasName AliasName, alias *Alias) *DefinitionWithAlias {
+	def := newDefinitionOrPanic(rawDefinition)
+	return &DefinitionWithAlias{
+		Definition: def,
+		aliasName:  aliasName,
+		alias:      alias,
+	}
+}
+
 func newDefinitionOrPanic(rawDefinition *RawDefinition) *Definition {
 	def, err := NewDefinition(rawDefinition)
 	if err != nil {
