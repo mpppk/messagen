@@ -6,10 +6,6 @@ import (
 )
 
 func TestDefinitionRepository_Generate(t *testing.T) {
-	type fields struct {
-		m               definitionMap
-		templatePickers []TemplatePicker
-	}
 	type args struct {
 		defType      DefinitionType
 		initialState *State
@@ -17,21 +13,19 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		fields  fields
+		opt     *DefinitionRepositoryOption
+		defs    []*RawDefinition
 		args    args
 		want    Message
 		wantErr bool
 	}{
 		{
 			name: "no variable in template",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa"},
-					})},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa"},
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -41,25 +35,20 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 		{
 			name: "one variable in template",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
-					})},
-					"NestTest": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"bbb"},
-						}),
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"xxx"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
-						}),
-					},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
+				{
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"bbb"},
+				},
+				{
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"xxx"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
+				},
 			},
 			args: args{
 				defType: "Test",
@@ -69,32 +58,22 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 		{
 			name: "two variable in template",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa{{.NestTest}}{{.NestTest2}}"},
-					})},
-					"NestTest": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"bbb"},
-						}),
-					},
-					"NestTest2": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest2",
-							RawTemplates: []RawTemplate{"xxx"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"NestTest": "xxx"}),
-						}),
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest2",
-							RawTemplates: []RawTemplate{"ccc"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"NestTest": "bbb"}),
-						}),
-					},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa{{.NestTest}}{{.NestTest2}}"},
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"bbb"},
+				}, {
+					Type:         "NestTest2",
+					RawTemplates: []RawTemplate{"xxx"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"NestTest": "xxx"}),
+				}, {
+					Type:         "NestTest2",
+					RawTemplates: []RawTemplate{"ccc"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"NestTest": "bbb"}),
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -104,21 +83,15 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 		{
 			name: "unresolvable template in template",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
-					})},
-					"NestTest": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"xxx"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
-						}),
-					},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"xxx"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -128,21 +101,15 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 		{
 			name: "unresolvable template in template2",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
-					})},
-					"NestTestxxxxxxx": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"xxx"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
-						}),
-					},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"xxx"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -152,30 +119,20 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 		{
 			name: "unresolvable template in template2",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
-					})},
-					"NestTest": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"{{.NestTest2}}"},
-						}),
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"bbb"},
-						}),
-					},
-					"NestTest2": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest2",
-							RawTemplates: []RawTemplate{"{{.NoExistDef}}"},
-						}),
-					},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"{{.NestTest2}}"},
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"bbb"},
+				}, {
+					Type:         "NestTest2",
+					RawTemplates: []RawTemplate{"{{.NoExistDef}}"},
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -185,26 +142,19 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 		{
 			name: "use ! operator",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
-					})},
-					"NestTest": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"xxx"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"k1!": "_"}),
-						}),
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"ddd"},
-							Constraints:  &Constraints{},
-						}),
-					},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"xxx"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"k1!": "_"}),
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"ddd"},
+					Constraints:  &Constraints{},
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType:      "Test",
@@ -215,26 +165,19 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 		{
 			name: "use ? operator",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
-					})},
-					"NestTest": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"xxx"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"K1?": "V2", "K2": "V2"}),
-						}),
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"bbb"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"K1?": "V1", "K2": "V2", "K3?": "V3"}),
-						}),
-					},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"xxx"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"K1?": "V2", "K2": "V2"}),
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"bbb"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"K1?": "V1", "K2": "V2", "K3?": "V3"}),
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType:      "Test",
@@ -245,33 +188,23 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 		{
 			name: "use + operator",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa{{.NestTest}}{{.NestTest2}}"},
-					})},
-					"NestTest": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"bbb"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"K1+": "V1"}),
-						}),
-					},
-					"NestTest2": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest2",
-							RawTemplates: []RawTemplate{"xxx"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"K1!": "_"}),
-						}),
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest2",
-							RawTemplates: []RawTemplate{"ccc"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"K1": "V1"}),
-						}),
-					},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa{{.NestTest}}{{.NestTest2}}"},
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"bbb"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"K1+": "V1"}),
+				}, {
+					Type:         "NestTest2",
+					RawTemplates: []RawTemplate{"xxx"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"K1!": "_"}),
+				}, {
+					Type:         "NestTest2",
+					RawTemplates: []RawTemplate{"ccc"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"K1": "V1"}),
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType: "Test",
@@ -281,26 +214,19 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 		{
 			name: "use / operator",
-			fields: fields{
-				m: definitionMap{
-					"Test": []*Definition{newDefinitionOrPanic(&RawDefinition{
-						Type:         "Test",
-						RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
-					})},
-					"NestTest": []*Definition{
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"bbb"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"K1/": ".?1"}),
-						}),
-						newDefinitionOrPanic(&RawDefinition{
-							Type:         "NestTest",
-							RawTemplates: []RawTemplate{"xxx"},
-							Constraints:  newConstraintsOrPanic(RawConstraints{"K1/": ".?2"}),
-						}),
-					},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"bbb"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"K1/": ".?1"}),
+				}, {
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"xxx"},
+					Constraints:  newConstraintsOrPanic(RawConstraints{"K1/": ".?2"}),
 				},
-				templatePickers: []TemplatePicker{AscendingOrderTemplatePicker},
 			},
 			args: args{
 				defType:      "Test",
@@ -311,13 +237,10 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if tt.name != "unresolvable template in template" {
-			continue
-		}
 		t.Run(tt.name, func(t *testing.T) {
-			d := &DefinitionRepository{
-				m:               tt.fields.m,
-				templatePickers: tt.fields.templatePickers,
+			d := NewDefinitionRepository(tt.opt)
+			if err := d.Add(tt.defs...); err != nil {
+				t.Errorf("unexpected error occurred in DefinitionRepository.Add(): %s", err)
 			}
 			got, err := d.Generate(tt.args.defType, tt.args.initialState, 1)
 			if (err != nil) != tt.wantErr {

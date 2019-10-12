@@ -52,6 +52,18 @@ func RandomWithWeightDefinitionPicker(definitions *Definitions, state *State) ([
 	return newDefinitions, nil
 }
 
+func ConstraintsSatisfiedDefinitionPicker(definitions *Definitions, state *State) ([]*Definition, error) {
+	var newDefinitions Definitions
+	for _, def := range *definitions {
+		if ok, err := def.CanBePicked(state); err != nil {
+			return nil, err
+		} else if ok {
+			newDefinitions = append(newDefinitions, def)
+		}
+	}
+	return newDefinitions, nil
+}
+
 func pickDefinitionIndexRandomWithWeight(weights []DefinitionWeight) int {
 	if len(weights) == 1 {
 		return 0
@@ -63,7 +75,7 @@ func pickDefinitionIndexRandomWithWeight(weights []DefinitionWeight) int {
 	for i, weight := range weights { // O(N)
 		currentWeightSum += float32(weight)
 		if r < currentWeightSum {
-			return i - 1
+			return i
 		}
 	}
 	panic("unexpected error occurred in currentWeightSum")

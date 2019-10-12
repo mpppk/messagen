@@ -67,29 +67,30 @@ func (d *Definition) getOrderBy() (orderBy []internal.DefinitionType) {
 	return
 }
 
-var defaultTemplatePickers = []internal.TemplatePicker{internal.RandomTemplatePicker, internal.NotAllowAliasDuplicateTemplatePicker}
-
 type Messagen struct {
 	repo *internal.DefinitionRepository
 }
 type Option struct {
-	TemplatePickers []internal.TemplatePicker
+	TemplatePickers   []internal.TemplatePicker
+	DefinitionPickers []internal.DefinitionPicker
 }
 
 func New(opt *Option) (*Messagen, error) {
-	var templatePickers []internal.TemplatePicker
-	if opt == nil {
-		templatePickers = defaultTemplatePickers
-	} else if opt.TemplatePickers == nil {
-		templatePickers = defaultTemplatePickers
-	} else {
+	templatePickers := []internal.TemplatePicker{internal.RandomTemplatePicker}
+	if opt != nil && opt.TemplatePickers != nil {
 		templatePickers = opt.TemplatePickers
+	}
+
+	var definitionPickers []internal.DefinitionPicker
+	if opt != nil && opt.DefinitionPickers != nil {
+		definitionPickers = opt.DefinitionPickers
 	}
 
 	return &Messagen{
 		repo: internal.NewDefinitionRepository(
 			&internal.DefinitionRepositoryOption{
-				TemplatePickers: templatePickers,
+				TemplatePickers:   templatePickers,
+				DefinitionPickers: definitionPickers,
 			},
 		),
 	}, nil
