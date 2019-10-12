@@ -206,23 +206,28 @@ func generate(def *Definition, aliasName AliasName, alias *Alias, state *State, 
 
 	go func() {
 		subStateChan, templateErrChan := resolveTemplates(&newDef, aliasName, state, repo)
-		for {
-			select {
-			case newState, ok := <-subStateChan:
-				if ok {
-					stateChan <- newState
-				} else {
-					close(stateChan)
-					return
-				}
-			case err, ok := <-templateErrChan:
-				if ok {
-					errChan <- err
-				}
-			}
+		if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
+			errChan <- err
+		} else {
+			close(stateChan)
 		}
 	}()
 	return stateChan, errChan, nil
+}
+
+func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) error {
+	for {
+		select {
+		case newState, ok := <-fromStateChan:
+			if ok {
+				toStateChan <- newState
+			} else {
+				return nil
+			}
+		case err := <-errChan:
+			return err
+		}
+	}
 }
 
 func resolveTemplates(def *Definition, aliasName AliasName, state *State, repo *DefinitionRepository) (chan *State, chan error) {
@@ -351,17 +356,10 @@ func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *S
 				return errors.New("err chan is nil")
 			}
 
-			for {
-				select {
-				case subState, ok := <-subStateChan:
-					if !ok {
-						return nil
-					}
-					stateChan <- subState
-				case err := <-defErrChan:
-					return err
-				}
+			if err := pipeStateChan(subStateChan, stateChan, defErrChan); err != nil {
+				return err
 			}
+			return nil
 		})
 	}
 
