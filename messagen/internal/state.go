@@ -110,11 +110,11 @@ func (s *State) SetByConstraints(constraints *Constraints) (int, error) {
 	return cnt, nil
 }
 
-func (s *State) SetByDef(def *Definition, aliasName AliasName, msg Message) error {
-	if aliasName == "" {
+func (s *State) SetByDef(def *DefinitionWithAlias, msg Message) error {
+	if def.aliasName == "" {
 		s.Set(def.Type, msg)
 	} else {
-		s.SetAlias(def.ID, aliasName, msg)
+		s.SetAlias(def.ID, def.aliasName, msg)
 	}
 	if _, err := s.SetByConstraints(def.Constraints); err != nil {
 		return xerrors.Errorf("failed to update state while message generating: %w", err)
@@ -122,8 +122,8 @@ func (s *State) SetByDef(def *Definition, aliasName AliasName, msg Message) erro
 	return nil
 }
 
-func (s *State) Update(def *Definition, pickedTemplate *Template, aliasName AliasName, msg Message) error {
-	if err := s.SetByDef(def, aliasName, msg); err != nil {
+func (s *State) Update(def *DefinitionWithAlias, pickedTemplate *Template, msg Message) error {
+	if err := s.SetByDef(def, msg); err != nil {
 		return err
 	}
 	s.AddPickedTemplate(def.ID, pickedTemplate)

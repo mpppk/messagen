@@ -6,10 +6,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type TemplatePicker func(def *Definition, alias *Alias, state *State) (Templates, error)
+type TemplatePicker func(def *DefinitionWithAlias, state *State) (Templates, error)
 type DefinitionPicker func(defs *Definitions, state *State) ([]*Definition, error)
 
-func RandomTemplatePicker(def *Definition, alias *Alias, state *State) (Templates, error) {
+func RandomTemplatePicker(def *DefinitionWithAlias, state *State) (Templates, error) {
 	templates := def.Templates
 	var newTemplates Templates
 	for {
@@ -25,8 +25,8 @@ func RandomTemplatePicker(def *Definition, alias *Alias, state *State) (Template
 	return newTemplates, nil
 }
 
-func NotAllowAliasDuplicateTemplatePicker(def *Definition, alias *Alias, state *State) (Templates, error) {
-	if alias != nil && alias.AllowDuplicate {
+func NotAllowAliasDuplicateTemplatePicker(def *DefinitionWithAlias, state *State) (Templates, error) {
+	if def.alias != nil && def.alias.AllowDuplicate {
 		return def.Templates, nil
 	}
 	pickedTemplates, ok := state.pickedTemplates[def.ID]
