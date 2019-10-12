@@ -30,13 +30,14 @@ type DefinitionRepositoryOption struct {
 }
 
 func NewDefinitionRepository(opt *DefinitionRepositoryOption) *DefinitionRepository {
-	templatePickers := opt.TemplatePickers
-	if templatePickers == nil {
-		templatePickers = []TemplatePicker{}
+	templatePickers := []TemplatePicker{NotAllowAliasDuplicateTemplatePicker}
+	if opt != nil && opt.TemplatePickers != nil {
+		templatePickers = append(templatePickers, opt.TemplatePickers...)
 	}
-	definitionPickers := opt.DefinitionPickers
-	if definitionPickers == nil {
-		definitionPickers = []DefinitionPicker{}
+
+	definitionPickers := []DefinitionPicker{}
+	if opt != nil && opt.DefinitionPickers != nil {
+		definitionPickers = append(definitionPickers, opt.DefinitionPickers...)
 	}
 	return &DefinitionRepository{
 		m:                 definitionMap{},
