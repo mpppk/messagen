@@ -75,7 +75,7 @@ func pickDefinitionIndexRandomWithWeight(weights []DefinitionWeight) int {
 	for i, weight := range weights { // O(N)
 		currentWeightSum += float32(weight)
 		if r < currentWeightSum {
-			return i - 1
+			return i
 		}
 	}
 	panic("unexpected error occurred in currentWeightSum")
