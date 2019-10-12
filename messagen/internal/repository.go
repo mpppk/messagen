@@ -35,7 +35,7 @@ func NewDefinitionRepository(opt *DefinitionRepositoryOption) *DefinitionReposit
 		templatePickers = append(templatePickers, opt.TemplatePickers...)
 	}
 
-	definitionPickers := []DefinitionPicker{}
+	definitionPickers := []DefinitionPicker{ConstraintsSatisfiedDefinitionPicker, RandomWithWeightDefinitionPicker}
 	if opt != nil && opt.DefinitionPickers != nil {
 		definitionPickers = append(definitionPickers, opt.DefinitionPickers...)
 	}
@@ -338,16 +338,12 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, error) {
 	candidateDefs, err := repo.pickDefinitions(defType, state)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to pick definitions")
+		return nil, xerrors.Errorf("failed to pick definitions", err)
 	}
 
 	stateChan := make(chan *State)
 	eg := errgroup.Group{}
 	for _, candidateDef := range candidateDefs {
-		if ok, _ := candidateDef.CanBePicked(state); !ok {
-			continue
-		}
-
 		candidateDef := candidateDef
 		candidateDefWithAlias := &DefinitionWithAlias{
 			Definition: candidateDef,
