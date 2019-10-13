@@ -124,10 +124,9 @@ func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State
 				aliasName:  "",
 				alias:      nil,
 			}
-			err := generate(stateChan, errChan, defWithAlias, initialState, d)
-			if err != nil {
+			subStateChan, templateErrChan := resolveTemplates(defWithAlias, initialState, d)
+			if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
 				errChan <- err
-				return
 			}
 		}
 		close(stateChan)
@@ -194,22 +193,6 @@ func (d *DefinitionRepository) applyDefinitionPickers(defs Definitions, state *S
 	return newDefinitions, nil
 }
 
-func generate(stateChan chan *State, errChan chan error, def *DefinitionWithAlias, state *State, repo *DefinitionRepository) error {
-	templates, err := repo.applyTemplatePickers(def, state)
-	if err != nil {
-		return err
-	}
-
-	newDef := *def
-	newDef.Templates = templates
-
-	subStateChan, templateErrChan := resolveTemplates(&newDef, state, repo)
-	if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
-		errChan <- err
-	}
-	return nil
-}
-
 func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) error {
 	for {
 		select {
@@ -231,7 +214,12 @@ func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) e
 func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRepository) (chan *State, chan error) {
 	stateChan := make(chan *State)
 	errChan := make(chan error)
-	templates := def.Templates
+	templates, err := repo.applyTemplatePickers(def, state)
+	if err != nil {
+		errChan <- err
+		return stateChan, errChan
+	}
+
 	go func() {
 		for _, defTemplate := range templates {
 			defTemplate := defTemplate
@@ -337,10 +325,9 @@ func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *S
 				aliasName:  aliasName,
 				alias:      alias,
 			}
-			err := generate(stateChan, errChan, candidateDefWithAlias, state, repo)
-			if err != nil {
+			subStateChan, templateErrChan := resolveTemplates(candidateDefWithAlias, state, repo)
+			if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
 				errChan <- err
-				return
 			}
 		}
 		close(stateChan)
