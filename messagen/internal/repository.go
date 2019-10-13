@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
@@ -105,6 +104,7 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *St
 }
 
 func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State) (msgChan chan Message, errChan chan error) {
+	stateChan := make(chan *State)
 	msgChan = make(chan Message)
 	errChan = make(chan error)
 	if initialState == nil {
@@ -117,51 +117,44 @@ func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State
 		return
 	}
 
-	wg := sync.WaitGroup{}
-	curLimiter := make(chan struct{}, maxCurLimit)
-	for _, def := range defs {
-		curLimiter <- struct{}{}
-		wg.Add(1)
-		go func(def *Definition) {
+	go func() {
+		for _, def := range defs {
 			defWithAlias := &DefinitionWithAlias{
 				Definition: def,
 				aliasName:  "",
 				alias:      nil,
 			}
-			stateChan, defErrChan, err := generate(defWithAlias, initialState, d)
+			err := generate(stateChan, errChan, defWithAlias, initialState, d)
 			if err != nil {
 				errChan <- err
 				return
 			}
-			for {
-				select {
-				case state, ok := <-stateChan:
-					if ok {
-						msg, ok := state.Get(defType)
-						if !ok {
-							errChan <- fmt.Errorf("error occurred in Generate. message not found. def type: %s", defType)
-						}
-						msgChan <- msg
-					} else {
-						wg.Done()
-						return
-					}
-				case err, ok := <-defErrChan:
-					if ok {
-						errChan <- err
-					}
-					wg.Done()
-					return
-				}
-			}
-		}(def)
-	}
-
-	go func() {
-		wg.Wait()
-		close(msgChan)
+		}
+		close(stateChan)
 	}()
 
+	go func() {
+		for {
+			select {
+			case state, ok := <-stateChan:
+				if ok {
+					msg, ok := state.Get(defType)
+					if !ok {
+						errChan <- fmt.Errorf("error occurred in Generate. message not found. def type: %s", defType)
+					}
+					msgChan <- msg
+				} else {
+					close(msgChan)
+					return
+				}
+			case err, ok := <-errChan:
+				if ok {
+					errChan <- err
+				}
+				return
+			}
+		}
+	}()
 	return msgChan, errChan
 }
 
@@ -201,26 +194,20 @@ func (d *DefinitionRepository) applyDefinitionPickers(defs Definitions, state *S
 	return newDefinitions, nil
 }
 
-func generate(def *DefinitionWithAlias, state *State, repo *DefinitionRepository) (chan *State, chan error, error) {
-	stateChan := make(chan *State)
-	errChan := make(chan error)
+func generate(stateChan chan *State, errChan chan error, def *DefinitionWithAlias, state *State, repo *DefinitionRepository) error {
 	templates, err := repo.applyTemplatePickers(def, state)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	newDef := *def
 	newDef.Templates = templates
 
-	go func() {
-		subStateChan, templateErrChan := resolveTemplates(&newDef, state, repo)
-		if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
-			errChan <- err
-		} else {
-			close(stateChan)
-		}
-	}()
-	return stateChan, errChan, nil
+	subStateChan, templateErrChan := resolveTemplates(&newDef, state, repo)
+	if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
+		errChan <- err
+	}
+	return nil
 }
 
 func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) error {
@@ -275,7 +262,6 @@ func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRe
 				}
 				stateChan <- newSatisfiedState
 			}
-			return
 		}
 		close(stateChan)
 	}()
@@ -351,23 +337,8 @@ func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *S
 				aliasName:  aliasName,
 				alias:      alias,
 			}
-			subStateChan, defErrChan, err := generate(candidateDefWithAlias, state, repo)
+			err := generate(stateChan, errChan, candidateDefWithAlias, state, repo)
 			if err != nil {
-				errChan <- err
-				return
-			}
-
-			if subStateChan == nil {
-				errChan <- errors.New("message chan is nil")
-				return
-			}
-
-			if defErrChan == nil {
-				errChan <- errors.New("err chan is nil")
-				return
-			}
-
-			if err := pipeStateChan(subStateChan, stateChan, defErrChan); err != nil {
 				errChan <- err
 				return
 			}
