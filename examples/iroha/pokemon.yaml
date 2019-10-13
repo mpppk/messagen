@@ -1,0 +1,20 @@
+Definitions:
+  - Type: Root
+    Templates:
+      - "{{.P1}} {{.P2}} {{.P3}} {{.P4}} {{.P5}} {{.P6}} {{.P7}} {{.P8}} {{.P9}} {{.P10}} {{.P11}} {{.P12}}"
+    Aliases:
+      P1: &pokemon_alias {"Type": "Pokemon", "AllowDuplicate": false}
+      P2: *pokemon_alias
+      P3: *pokemon_alias
+      P4: *pokemon_alias
+      P5: *pokemon_alias
+      P6: *pokemon_alias
+      P7: *pokemon_alias
+      P8: *pokemon_alias
+      P9: *pokemon_alias
+      P10: *pokemon_alias
+      P11: *pokemon_alias
+      P12: *pokemon_alias
+
+  - Type: Pokemon
+    Templates: ["ヌオー", "ソーナノ", "ゼニガメ", "ペロリーム", "チョボマキ", "ハブネーク", "ワタッコ", "ミュウ", "エレザード", "モンジャラ", "スピアー", "ケルディオ"]

@@ -1,11 +1,7 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
-	"sync"
-
-	"golang.org/x/sync/errgroup"
 
 	"golang.org/x/xerrors"
 )
@@ -105,6 +101,7 @@ func (d *DefinitionRepository) Generate(defType DefinitionType, initialState *St
 }
 
 func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State) (msgChan chan Message, errChan chan error) {
+	stateChan := make(chan *State)
 	msgChan = make(chan Message)
 	errChan = make(chan error)
 	if initialState == nil {
@@ -117,49 +114,43 @@ func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State
 		return
 	}
 
-	wg := sync.WaitGroup{}
-	for _, def := range defs {
-		wg.Add(1)
-		go func(def *Definition) {
+	go func() {
+		for _, def := range defs {
 			defWithAlias := &DefinitionWithAlias{
 				Definition: def,
 				aliasName:  "",
 				alias:      nil,
 			}
-			stateChan, defErrChan, err := generate(defWithAlias, initialState, d)
-			if err != nil {
+			subStateChan, templateErrChan := resolveTemplates(defWithAlias, initialState, d)
+			if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
 				errChan <- err
-				return
 			}
-			for {
-				select {
-				case state, ok := <-stateChan:
-					if ok {
-						msg, ok := state.Get(defType)
-						if !ok {
-							errChan <- fmt.Errorf("error occurred in Generate. message not found. def type: %s", defType)
-						}
-						msgChan <- msg
-					} else {
-						wg.Done()
-						return
-					}
-				case err, ok := <-defErrChan:
-					if ok {
-						errChan <- err
-					}
-					wg.Done()
-					return
-				}
-			}
-		}(def)
-	}
-
-	go func() {
-		wg.Wait()
-		close(msgChan)
+		}
+		close(stateChan)
 	}()
 
+	go func() {
+		for {
+			select {
+			case state, ok := <-stateChan:
+				if ok {
+					msg, ok := state.Get(defType)
+					if !ok {
+						errChan <- fmt.Errorf("error occurred in Generate. message not found. def type: %s", defType)
+					}
+					msgChan <- msg
+				} else {
+					close(msgChan)
+					return
+				}
+			case err, ok := <-errChan:
+				if ok {
+					errChan <- err
+				}
+				return
+			}
+		}
+	}()
 	return msgChan, errChan
 }
 
@@ -199,28 +190,6 @@ func (d *DefinitionRepository) applyDefinitionPickers(defs Definitions, state *S
 	return newDefinitions, nil
 }
 
-func generate(def *DefinitionWithAlias, state *State, repo *DefinitionRepository) (chan *State, chan error, error) {
-	stateChan := make(chan *State)
-	errChan := make(chan error)
-	templates, err := repo.applyTemplatePickers(def, state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	newDef := *def
-	newDef.Templates = templates
-
-	go func() {
-		subStateChan, templateErrChan := resolveTemplates(&newDef, state, repo)
-		if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
-			errChan <- err
-		} else {
-			close(stateChan)
-		}
-	}()
-	return stateChan, errChan, nil
-}
-
 func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) error {
 	for {
 		select {
@@ -230,7 +199,10 @@ func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) e
 			} else {
 				return nil
 			}
-		case err := <-errChan:
+		case err, ok := <-errChan:
+			if !ok {
+				return fmt.Errorf("err chan closed")
+			}
 			return err
 		}
 	}
@@ -238,43 +210,44 @@ func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) e
 
 func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRepository) (chan *State, chan error) {
 	stateChan := make(chan *State)
-	eg := errgroup.Group{}
-	templates := def.Templates
-	for _, defTemplate := range templates {
-		defTemplate := defTemplate
-		eg.Go(func() error {
+	errChan := make(chan error)
+	templates, err := repo.applyTemplatePickers(def, state)
+	if err != nil {
+		errChan <- err
+		return stateChan, errChan
+	}
+
+	go func() {
+		for _, defTemplate := range templates {
+			defTemplate := defTemplate
 			newState := state.Copy(def.OrderBy)
 			if len(*defTemplate.Depends) == 0 {
 				if err := newState.Update(def, defTemplate, Message(defTemplate.Raw)); err != nil {
-					return err
+					errChan <- err
+					return
 				}
 				stateChan <- newState
-				return nil
+				continue
 			}
 			subStateChan, err := resolveDefDepends(defTemplate, newState, repo, def.Aliases)
 			if err != nil {
-				return err
+				errChan <- err
+				return
 			}
 			for satisfiedState := range subStateChan {
 				msg, err := defTemplate.Execute(satisfiedState)
 				if err != nil {
-					return err
+					errChan <- err
+					return
 				}
 				newSatisfiedState := satisfiedState.Copy(def.OrderBy)
 				if err := newSatisfiedState.Update(def, defTemplate, msg); err != nil {
-					return err
+					errChan <- err
+					return
 				}
 				stateChan <- newSatisfiedState
 			}
-			return nil
-		})
-	}
-	errChan := make(chan error)
-	go func() {
-		if err := eg.Wait(); err != nil {
-			errChan <- err
 		}
-
 		close(stateChan)
 	}()
 	return stateChan, errChan
@@ -297,13 +270,8 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 		aliasName = AliasName(defType)
 		defType = alias.ReferType
 	}
-	pickDefStateChan, err := pickDef(defType, aliasName, alias, state, repo)
-	if err != nil {
-		return nil, err
-	}
+	pickDefStateChan, _ := pickDef(defType, aliasName, alias, state, repo) // FIXME: handle error
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	errChan := make(chan error)
 	go func() {
 		for newState := range pickDefStateChan {
@@ -312,70 +280,43 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 				errChan <- err
 				return
 			}
-			wg.Add(1)
-			go func() {
-				for satisfiedState := range satisfiedStateChan {
-					stateChan <- satisfiedState
-				}
-				wg.Done()
-			}()
+			for satisfiedState := range satisfiedStateChan {
+				stateChan <- satisfiedState
+			}
 		}
-		wg.Done()
+		close(stateChan)
 	}()
 
 	go func() {
 		panic(<-errChan) // FIXME goroutine leak
 	}()
 
-	go func() {
-		wg.Wait()
-		close(stateChan)
-	}()
-
 	return stateChan, nil
 }
 
-func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, error) {
+func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, chan error) {
+	stateChan := make(chan *State)
+	errChan := make(chan error)
 	candidateDefs, err := repo.pickDefinitions(defType, state)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to pick definitions", err)
-	}
-
-	stateChan := make(chan *State)
-	eg := errgroup.Group{}
-	for _, candidateDef := range candidateDefs {
-		candidateDef := candidateDef
-		candidateDefWithAlias := &DefinitionWithAlias{
-			Definition: candidateDef,
-			aliasName:  aliasName,
-			alias:      alias,
-		}
-		eg.Go(func() error {
-			subStateChan, defErrChan, err := generate(candidateDefWithAlias, state, repo)
-			if err != nil {
-				return err
-			}
-
-			if subStateChan == nil {
-				return errors.New("message chan is nil")
-			}
-
-			if defErrChan == nil {
-				return errors.New("err chan is nil")
-			}
-
-			if err := pipeStateChan(subStateChan, stateChan, defErrChan); err != nil {
-				return err
-			}
-			return nil
-		})
+		errChan <- xerrors.Errorf("failed to pick definitions", err)
+		return stateChan, errChan
 	}
 
 	go func() {
-		if err := eg.Wait(); err != nil {
-			panic(err) // FIXME
+		for _, candidateDef := range candidateDefs {
+			candidateDef := candidateDef
+			candidateDefWithAlias := &DefinitionWithAlias{
+				Definition: candidateDef,
+				aliasName:  aliasName,
+				alias:      alias,
+			}
+			subStateChan, templateErrChan := resolveTemplates(candidateDefWithAlias, state, repo)
+			if err := pipeStateChan(subStateChan, stateChan, templateErrChan); err != nil {
+				errChan <- err
+			}
 		}
 		close(stateChan)
 	}()
-	return stateChan, nil
+	return stateChan, errChan
 }
