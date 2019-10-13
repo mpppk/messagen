@@ -87,11 +87,17 @@ func New(opt *Option) (*Messagen, error) {
 		definitionPickers = opt.DefinitionPickers
 	}
 
+	var templateValidators []internal.TemplateValidator
+	if opt != nil && opt.TemplateValidators != nil {
+		templateValidators = opt.TemplateValidators
+	}
+
 	return &Messagen{
 		repo: internal.NewDefinitionRepository(
 			&internal.DefinitionRepositoryOption{
-				TemplatePickers:   templatePickers,
-				DefinitionPickers: definitionPickers,
+				TemplatePickers:    templatePickers,
+				DefinitionPickers:  definitionPickers,
+				TemplateValidators: templateValidators,
 			},
 		),
 	}, nil

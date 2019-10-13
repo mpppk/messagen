@@ -18,7 +18,8 @@ func panicIfErrExist(err error) {
 
 func main() {
 	opt := &messagen.Option{
-		TemplatePickers: []messagen.TemplatePicker{messagen.RandomTemplatePicker, IrohaTemplatePicker},
+		TemplatePickers:    []messagen.TemplatePicker{messagen.RandomTemplatePicker, IrohaTemplatePicker},
+		TemplateValidators: []messagen.TemplateValidator{IrohaTemplateValidator},
 	}
 	generator, err := messagen.New(opt)
 	panicIfErrExist(err)
@@ -66,6 +67,14 @@ func IrohaTemplatePicker(def *messagen.DefinitionWithAlias, state *messagen.Stat
 		newTemplates = append(newTemplates, template)
 	}
 	return newTemplates, nil
+}
+
+func IrohaTemplateValidator(template *messagen.Template, state *messagen.State) (bool, error) {
+	incompleteMsg, _, err := template.ExecuteWithIncompleteState(state)
+	if err != nil {
+		return false, err
+	}
+	return !HasDuplicatedRune(NormalizeKatakanaWord(string(incompleteMsg))), nil
 }
 
 func NormalizeKatakanaWord(word string) string {
@@ -123,6 +132,7 @@ func newNormalizeKatakanaMap() map[rune]rune {
 }
 
 func HasDuplicatedRune(word string) bool {
+	word = strings.ReplaceAll(word, " ", "")
 	m := map[rune]struct{}{}
 	for _, r := range word {
 		if _, ok := m[r]; ok {
