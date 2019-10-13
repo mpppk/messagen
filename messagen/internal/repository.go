@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"sync"
 
-	"golang.org/x/sync/errgroup"
-
 	"golang.org/x/xerrors"
 )
 
 type definitionMap map[DefinitionType][]*Definition
 type Message string
+
+const maxCurLimit = 1
 
 func AscendingOrderTemplatePicker(def *DefinitionWithAlias, state *State) (Templates, error) {
 	return def.Templates, nil
@@ -118,7 +118,9 @@ func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State
 	}
 
 	wg := sync.WaitGroup{}
+	curLimiter := make(chan struct{}, maxCurLimit)
 	for _, def := range defs {
+		curLimiter <- struct{}{}
 		wg.Add(1)
 		go func(def *Definition) {
 			defWithAlias := &DefinitionWithAlias{
@@ -230,7 +232,10 @@ func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) e
 			} else {
 				return nil
 			}
-		case err := <-errChan:
+		case err, ok := <-errChan:
+			if !ok {
+				return fmt.Errorf("err chan closed")
+			}
 			return err
 		}
 	}
@@ -238,43 +243,40 @@ func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) e
 
 func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRepository) (chan *State, chan error) {
 	stateChan := make(chan *State)
-	eg := errgroup.Group{}
+	errChan := make(chan error)
 	templates := def.Templates
-	for _, defTemplate := range templates {
-		defTemplate := defTemplate
-		eg.Go(func() error {
+	go func() {
+		for _, defTemplate := range templates {
+			defTemplate := defTemplate
 			newState := state.Copy(def.OrderBy)
 			if len(*defTemplate.Depends) == 0 {
 				if err := newState.Update(def, defTemplate, Message(defTemplate.Raw)); err != nil {
-					return err
+					errChan <- err
+					return
 				}
 				stateChan <- newState
-				return nil
+				continue
 			}
 			subStateChan, err := resolveDefDepends(defTemplate, newState, repo, def.Aliases)
 			if err != nil {
-				return err
+				errChan <- err
+				return
 			}
 			for satisfiedState := range subStateChan {
 				msg, err := defTemplate.Execute(satisfiedState)
 				if err != nil {
-					return err
+					errChan <- err
+					return
 				}
 				newSatisfiedState := satisfiedState.Copy(def.OrderBy)
 				if err := newSatisfiedState.Update(def, defTemplate, msg); err != nil {
-					return err
+					errChan <- err
+					return
 				}
 				stateChan <- newSatisfiedState
 			}
-			return nil
-		})
-	}
-	errChan := make(chan error)
-	go func() {
-		if err := eg.Wait(); err != nil {
-			errChan <- err
+			return
 		}
-
 		close(stateChan)
 	}()
 	return stateChan, errChan
@@ -297,10 +299,7 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 		aliasName = AliasName(defType)
 		defType = alias.ReferType
 	}
-	pickDefStateChan, err := pickDef(defType, aliasName, alias, state, repo)
-	if err != nil {
-		return nil, err
-	}
+	pickDefStateChan, _ := pickDef(defType, aliasName, alias, state, repo) // FIXME: handle error
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -335,47 +334,45 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 	return stateChan, nil
 }
 
-func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, error) {
+func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, chan error) {
+	stateChan := make(chan *State)
+	errChan := make(chan error)
 	candidateDefs, err := repo.pickDefinitions(defType, state)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to pick definitions", err)
-	}
-
-	stateChan := make(chan *State)
-	eg := errgroup.Group{}
-	for _, candidateDef := range candidateDefs {
-		candidateDef := candidateDef
-		candidateDefWithAlias := &DefinitionWithAlias{
-			Definition: candidateDef,
-			aliasName:  aliasName,
-			alias:      alias,
-		}
-		eg.Go(func() error {
-			subStateChan, defErrChan, err := generate(candidateDefWithAlias, state, repo)
-			if err != nil {
-				return err
-			}
-
-			if subStateChan == nil {
-				return errors.New("message chan is nil")
-			}
-
-			if defErrChan == nil {
-				return errors.New("err chan is nil")
-			}
-
-			if err := pipeStateChan(subStateChan, stateChan, defErrChan); err != nil {
-				return err
-			}
-			return nil
-		})
+		errChan <- xerrors.Errorf("failed to pick definitions", err)
+		return stateChan, errChan
 	}
 
 	go func() {
-		if err := eg.Wait(); err != nil {
-			panic(err) // FIXME
+		for _, candidateDef := range candidateDefs {
+			candidateDef := candidateDef
+			candidateDefWithAlias := &DefinitionWithAlias{
+				Definition: candidateDef,
+				aliasName:  aliasName,
+				alias:      alias,
+			}
+			subStateChan, defErrChan, err := generate(candidateDefWithAlias, state, repo)
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			if subStateChan == nil {
+				errChan <- errors.New("message chan is nil")
+				return
+			}
+
+			if defErrChan == nil {
+				errChan <- errors.New("err chan is nil")
+				return
+			}
+
+			if err := pipeStateChan(subStateChan, stateChan, defErrChan); err != nil {
+				errChan <- err
+				return
+			}
 		}
 		close(stateChan)
 	}()
-	return stateChan, nil
+	return stateChan, errChan
 }
