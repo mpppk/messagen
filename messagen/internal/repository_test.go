@@ -257,6 +257,71 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 	}
 }
 
+func TestDefinitionRepository_Generate_WithValidator(t *testing.T) {
+	type args struct {
+		defType      DefinitionType
+		initialState *State
+	}
+
+	tests := []struct {
+		name    string
+		opt     *DefinitionRepositoryOption
+		defs    []*RawDefinition
+		args    args
+		want    Message
+		wantErr bool
+	}{
+		{
+			name: "maxStrLen validator",
+			opt: &DefinitionRepositoryOption{
+				TemplateValidators: []TemplateValidator{MaxStrLenValidator(2)},
+			},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"xxx"},
+				},
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"{{.NestTest}}"},
+				},
+				{
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"yyy"},
+				},
+				{
+					Type:         "NestTest",
+					RawTemplates: []RawTemplate{"aa"},
+				},
+			},
+			args: args{
+				defType: "Test",
+			},
+			want:    "aa",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := NewDefinitionRepository(tt.opt)
+			if err := d.Add(tt.defs...); err != nil {
+				t.Errorf("unexpected error occurred in DefinitionRepository.Add(): %s", err)
+			}
+			got, err := d.Generate(tt.args.defType, tt.args.initialState, 1)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DefinitionRepository.Generate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				return
+			}
+			if got[0] != tt.want {
+				t.Errorf("DefinitionRepository.Generate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRandomTemplatePicker(t *testing.T) {
 	def := newDefinitionWithAliasOrPanic(&RawDefinition{
 		Type:         "Test",

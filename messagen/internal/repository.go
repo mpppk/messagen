@@ -14,15 +14,17 @@ func AscendingOrderTemplatePicker(def *DefinitionWithAlias, state *State) (Templ
 }
 
 type DefinitionRepository struct {
-	m                 definitionMap
-	templatePickers   []TemplatePicker
-	definitionPickers []DefinitionPicker
-	maxID             DefinitionID
+	m                  definitionMap
+	templatePickers    []TemplatePicker
+	definitionPickers  []DefinitionPicker
+	templateValidators []TemplateValidator
+	maxID              DefinitionID
 }
 
 type DefinitionRepositoryOption struct {
-	TemplatePickers   []TemplatePicker
-	DefinitionPickers []DefinitionPicker
+	TemplatePickers    []TemplatePicker
+	DefinitionPickers  []DefinitionPicker
+	TemplateValidators []TemplateValidator
 }
 
 func NewDefinitionRepository(opt *DefinitionRepositoryOption) *DefinitionRepository {
@@ -35,11 +37,18 @@ func NewDefinitionRepository(opt *DefinitionRepositoryOption) *DefinitionReposit
 	if opt != nil && opt.DefinitionPickers != nil {
 		definitionPickers = append(definitionPickers, opt.DefinitionPickers...)
 	}
+
+	var templateValidators []TemplateValidator
+	if opt != nil && opt.TemplateValidators != nil {
+		templateValidators = opt.TemplateValidators
+	}
+
 	return &DefinitionRepository{
-		m:                 definitionMap{},
-		templatePickers:   templatePickers,
-		definitionPickers: definitionPickers,
-		maxID:             0,
+		m:                  definitionMap{},
+		templatePickers:    templatePickers,
+		definitionPickers:  definitionPickers,
+		templateValidators: templateValidators,
+		maxID:              0,
 	}
 }
 
@@ -190,6 +199,17 @@ func (d *DefinitionRepository) applyDefinitionPickers(defs Definitions, state *S
 	return newDefinitions, nil
 }
 
+func (d *DefinitionRepository) applyTemplateValidators(template *Template, state *State) (bool, error) {
+	for _, templateValidator := range d.templateValidators {
+		if ok, err := templateValidator(template, state); err != nil {
+			return false, err
+		} else if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func pipeStateChan(fromStateChan, toStateChan chan *State, errChan chan error) error {
 	for {
 		select {
@@ -240,6 +260,7 @@ func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRe
 					errChan <- err
 					return
 				}
+
 				newSatisfiedState := satisfiedState.Copy(def.OrderBy)
 				if err := newSatisfiedState.Update(def, defTemplate, msg); err != nil {
 					errChan <- err
@@ -275,6 +296,13 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 	errChan := make(chan error)
 	go func() {
 		for newState := range pickDefStateChan {
+			if ok, err := repo.applyTemplateValidators(template, newState); err != nil {
+				errChan <- err
+				return
+			} else if !ok {
+				continue
+			}
+
 			satisfiedStateChan, err := resolveDefDepends(template, newState, repo, aliases)
 			if err != nil {
 				errChan <- err

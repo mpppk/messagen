@@ -7,5 +7,6 @@ type State = internal.State
 type Templates = internal.Templates
 type TemplatePicker = internal.TemplatePicker
 type DefinitionPicker = internal.DefinitionPicker
+type TemplateValidator = internal.TemplateValidator
 
 var RandomTemplatePicker = internal.RandomTemplatePicker
