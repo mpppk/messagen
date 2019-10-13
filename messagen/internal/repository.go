@@ -2,15 +2,12 @@ package internal
 
 import (
 	"fmt"
-	"sync"
 
 	"golang.org/x/xerrors"
 )
 
 type definitionMap map[DefinitionType][]*Definition
 type Message string
-
-const maxCurLimit = 1
 
 func AscendingOrderTemplatePicker(def *DefinitionWithAlias, state *State) (Templates, error) {
 	return def.Templates, nil
@@ -275,8 +272,6 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 	}
 	pickDefStateChan, _ := pickDef(defType, aliasName, alias, state, repo) // FIXME: handle error
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	errChan := make(chan error)
 	go func() {
 		for newState := range pickDefStateChan {
@@ -285,24 +280,15 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 				errChan <- err
 				return
 			}
-			wg.Add(1)
-			go func() {
-				for satisfiedState := range satisfiedStateChan {
-					stateChan <- satisfiedState
-				}
-				wg.Done()
-			}()
+			for satisfiedState := range satisfiedStateChan {
+				stateChan <- satisfiedState
+			}
 		}
-		wg.Done()
+		close(stateChan)
 	}()
 
 	go func() {
 		panic(<-errChan) // FIXME goroutine leak
-	}()
-
-	go func() {
-		wg.Wait()
-		close(stateChan)
 	}()
 
 	return stateChan, nil
