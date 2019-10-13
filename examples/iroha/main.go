@@ -18,7 +18,7 @@ func panicIfErrExist(err error) {
 
 func main() {
 	opt := &messagen.Option{
-		TemplatePickers: []messagen.TemplatePicker{IrohaTemplatePicker},
+		TemplatePickers: []messagen.TemplatePicker{messagen.RandomTemplatePicker, IrohaTemplatePicker},
 	}
 	generator, err := messagen.New(opt)
 	panicIfErrExist(err)
