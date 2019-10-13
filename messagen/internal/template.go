@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"math/rand"
 	"regexp"
+	"strings"
 	"text/template"
 
 	"golang.org/x/xerrors"
@@ -85,6 +86,52 @@ func (t *Template) Execute(state *State) (Message, error) {
 		return "", xerrors.Errorf("failed to execute template. template:%s  state:%#v : %w", t.Raw, state, err)
 	}
 	return Message(buf.String()), nil
+}
+
+func (t *Template) ExecuteWithIncompleteState(state *State) (Message, []DefinitionType, error) {
+	chunkTemplates, err := t.toChunks()
+	if err != nil {
+		return "", nil, err
+	}
+	msg := Message("")
+	var incompleteDefTypes []DefinitionType
+	for _, chunkTemplate := range chunkTemplates {
+		if chunkTemplate.IsSatisfiedState(state) {
+			m, err := chunkTemplate.Execute(state)
+			if err != nil {
+				return "", nil, err
+			}
+			msg += m
+		} else {
+			defType, _ := chunkTemplate.GetFirstUnsatisfiedDef(state)
+			incompleteDefTypes = append(incompleteDefTypes, defType)
+		}
+	}
+	return msg, incompleteDefTypes, nil
+}
+
+func (t *Template) toChunks() (Templates, error) {
+	var newTemplates Templates
+	chunkRawTemplates := strings.Split(string(t.Raw), "}}")
+	for _, chunkRawTemplate := range chunkRawTemplates {
+		chunks := strings.Split(chunkRawTemplate, "{{")
+		tmpl1, err := NewTemplate(RawTemplate(chunks[0]), nil)
+		if err != nil {
+			return nil, err
+		}
+		newTemplates = append(newTemplates, tmpl1)
+
+		if len(chunks) != 2 {
+			continue
+		}
+
+		tmpl2, err := NewTemplate("{{"+RawTemplate(chunks[1])+"}}", nil)
+		if err != nil {
+			return nil, err
+		}
+		newTemplates = append(newTemplates, tmpl2)
+	}
+	return newTemplates, nil
 }
 
 func (t *Template) IsSatisfiedState(state *State) bool {

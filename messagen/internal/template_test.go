@@ -360,3 +360,87 @@ func TestDefinitionTypes_sortByOrderBy(t *testing.T) {
 		})
 	}
 }
+
+func TestTemplate_ExecuteWithIncompleteState(t1 *testing.T) {
+	type args struct {
+		state *State
+	}
+	tests := []struct {
+		name        string
+		rawTemplate RawTemplate
+		args        args
+		want        Message
+		want1       []DefinitionType
+		wantErr     bool
+	}{
+		{
+			name:        "",
+			rawTemplate: "aaa",
+			args: args{
+				state: NewState(MessageMap{}),
+			},
+			want:    "aaa",
+			want1:   nil,
+			wantErr: false,
+		},
+		{
+			name:        "",
+			rawTemplate: "aaa{{.Test}}",
+			args: args{
+				state: NewState(MessageMap{"Test": "bbb"}),
+			},
+			want:    "aaabbb",
+			want1:   nil,
+			wantErr: false,
+		},
+		{
+			name:        "",
+			rawTemplate: "aaa{{.Test}}",
+			args: args{
+				state: NewState(MessageMap{}),
+			},
+			want:    "aaa",
+			want1:   []DefinitionType{"Test"},
+			wantErr: false,
+		},
+		{
+			name:        "",
+			rawTemplate: "aaa{{.Test}}bbb",
+			args: args{
+				state: NewState(MessageMap{}),
+			},
+			want:    "aaabbb",
+			want1:   []DefinitionType{"Test"},
+			wantErr: false,
+		},
+		{
+			name:        "",
+			rawTemplate: "aaa{{.Test}}bbb",
+			args: args{
+				state: NewState(MessageMap{"Test": "ccc"}),
+			},
+			want:    "aaacccbbb",
+			want1:   nil,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t1.Run(tt.name, func(t1 *testing.T) {
+			t, err := NewTemplate(tt.rawTemplate, nil)
+			if err != nil {
+				t1.Errorf("unexpected error occurred in NewTemplate error = %v", err)
+			}
+			got, got1, err := t.ExecuteWithIncompleteState(tt.args.state)
+			if (err != nil) != tt.wantErr {
+				t1.Errorf("ExecuteWithIncompleteState() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t1.Errorf("ExecuteWithIncompleteState() got = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t1.Errorf("ExecuteWithIncompleteState() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}

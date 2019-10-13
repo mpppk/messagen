@@ -71,8 +71,9 @@ type Messagen struct {
 	repo *internal.DefinitionRepository
 }
 type Option struct {
-	TemplatePickers   []internal.TemplatePicker
-	DefinitionPickers []internal.DefinitionPicker
+	TemplatePickers    []internal.TemplatePicker
+	DefinitionPickers  []internal.DefinitionPicker
+	TemplateValidators []internal.TemplateValidator
 }
 
 func New(opt *Option) (*Messagen, error) {
