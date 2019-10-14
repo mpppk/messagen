@@ -254,28 +254,34 @@ func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRe
 				}
 				continue
 			}
-			subStateChan, err := resolveDefDepends(defTemplate, newState, repo, def.Aliases)
-			if err != nil {
-				errChan <- err
-				return
-			}
-			for satisfiedState := range subStateChan {
-				msg, err := defTemplate.Execute(satisfiedState)
-				if err != nil {
-					errChan <- err
-					return
-				}
+			subStateChan, errChan2 := resolveDefDepends(defTemplate, newState, repo, def.Aliases)
+		L:
+			for {
+				select {
+				case satisfiedState, ok := <-subStateChan:
+					if !ok {
+						break L
+					}
+					msg, err := defTemplate.Execute(satisfiedState)
+					if err != nil {
+						errChan <- err
+						return
+					}
 
-				newSatisfiedState := satisfiedState.Copy(def.OrderBy)
-				if err := newSatisfiedState.Update(def, defTemplate, msg); err != nil {
+					newSatisfiedState := satisfiedState.Copy(def.OrderBy)
+					if err := newSatisfiedState.Update(def, defTemplate, msg); err != nil {
+						errChan <- err
+						return
+					}
+					if ok, err := repo.applyTemplateValidators(defTemplate, newSatisfiedState); err != nil {
+						errChan <- err
+						return
+					} else if ok {
+						stateChan <- newSatisfiedState
+					}
+				case err := <-errChan2:
 					errChan <- err
 					return
-				}
-				if ok, err := repo.applyTemplateValidators(defTemplate, newSatisfiedState); err != nil {
-					errChan <- err
-					return
-				} else if ok {
-					stateChan <- newSatisfiedState
 				}
 			}
 		}
@@ -284,14 +290,15 @@ func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRe
 	return stateChan, errChan
 }
 
-func resolveDefDepends(template *Template, state *State, repo *DefinitionRepository, aliases Aliases) (chan *State, error) {
+func resolveDefDepends(template *Template, state *State, repo *DefinitionRepository, aliases Aliases) (chan *State, chan error) {
+	errChan := make(chan error)
 	stateChan := make(chan *State)
 	if template.IsSatisfiedState(state) {
 		go func() {
 			stateChan <- state
 			close(stateChan)
 		}()
-		return stateChan, nil
+		return stateChan, errChan
 	}
 
 	defType, _ := template.GetFirstUnsatisfiedDef(state)
@@ -303,7 +310,6 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 	}
 	pickDefStateChan, _ := pickDef(defType, aliasName, alias, state, repo) // FIXME: handle error
 
-	errChan := make(chan error)
 	go func() {
 		for newState := range pickDefStateChan {
 			if ok, err := repo.applyTemplateValidators(template, newState); err != nil {
@@ -313,23 +319,16 @@ func resolveDefDepends(template *Template, state *State, repo *DefinitionReposit
 				continue
 			}
 
-			satisfiedStateChan, err := resolveDefDepends(template, newState, repo, aliases)
-			if err != nil {
+			satisfiedStateChan, errChan2 := resolveDefDepends(template, newState, repo, aliases)
+			if err := pipeStateChan(satisfiedStateChan, stateChan, errChan2); err != nil {
 				errChan <- err
 				return
-			}
-			for satisfiedState := range satisfiedStateChan {
-				stateChan <- satisfiedState
 			}
 		}
 		close(stateChan)
 	}()
 
-	go func() {
-		panic(<-errChan) // FIXME goroutine leak
-	}()
-
-	return stateChan, nil
+	return stateChan, errChan
 }
 
 func pickDef(defType DefinitionType, aliasName AliasName, alias *Alias, state *State, repo *DefinitionRepository) (chan *State, chan error) {
