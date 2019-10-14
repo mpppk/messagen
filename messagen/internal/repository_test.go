@@ -45,9 +45,9 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					RawTemplates: []RawTemplate{"bbb"},
 				},
 				{
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"xxx"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"xxx"},
+					RawConstraints: RawConstraints{"k999": "v999"},
 				},
 			},
 			args: args{
@@ -66,13 +66,13 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					Type:         "NestTest",
 					RawTemplates: []RawTemplate{"bbb"},
 				}, {
-					Type:         "NestTest2",
-					RawTemplates: []RawTemplate{"xxx"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"NestTest": "xxx"}),
+					Type:           "NestTest2",
+					RawTemplates:   []RawTemplate{"xxx"},
+					RawConstraints: RawConstraints{"NestTest": "xxx"},
 				}, {
-					Type:         "NestTest2",
-					RawTemplates: []RawTemplate{"ccc"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"NestTest": "bbb"}),
+					Type:           "NestTest2",
+					RawTemplates:   []RawTemplate{"ccc"},
+					RawConstraints: RawConstraints{"NestTest": "bbb"},
 				},
 			},
 			args: args{
@@ -88,9 +88,9 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					Type:         "Test",
 					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
 				}, {
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"xxx"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"xxx"},
+					RawConstraints: RawConstraints{"k999": "v999"},
 				},
 			},
 			args: args{
@@ -106,9 +106,9 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					Type:         "Test",
 					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
 				}, {
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"xxx"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"k999": "v999"}),
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"xxx"},
+					RawConstraints: RawConstraints{"k999": "v999"},
 				},
 			},
 			args: args{
@@ -147,13 +147,13 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					Type:         "Test",
 					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
 				}, {
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"xxx"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"k1!": "_"}),
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"xxx"},
+					RawConstraints: RawConstraints{"k1!": "_"},
 				}, {
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"ddd"},
-					Constraints:  &Constraints{},
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"ddd"},
+					RawConstraints: RawConstraints{},
 				},
 			},
 			args: args{
@@ -170,13 +170,13 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					Type:         "Test",
 					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
 				}, {
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"xxx"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"K1?": "V2", "K2": "V2"}),
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"xxx"},
+					RawConstraints: RawConstraints{"K1?": "V2", "K2": "V2"},
 				}, {
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"bbb"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"K1?": "V1", "K2": "V2", "K3?": "V3"}),
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"bbb"},
+					RawConstraints: RawConstraints{"K1?": "V1", "K2": "V2", "K3?": "V3"},
 				},
 			},
 			args: args{
@@ -193,17 +193,17 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					Type:         "Test",
 					RawTemplates: []RawTemplate{"aaa{{.NestTest}}{{.NestTest2}}"},
 				}, {
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"bbb"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"K1+": "V1"}),
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"bbb"},
+					RawConstraints: RawConstraints{"K1+": "V1"},
 				}, {
-					Type:         "NestTest2",
-					RawTemplates: []RawTemplate{"xxx"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"K1!": "_"}),
+					Type:           "NestTest2",
+					RawTemplates:   []RawTemplate{"xxx"},
+					RawConstraints: RawConstraints{"K1!": "_"},
 				}, {
-					Type:         "NestTest2",
-					RawTemplates: []RawTemplate{"ccc"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"K1": "V1"}),
+					Type:           "NestTest2",
+					RawTemplates:   []RawTemplate{"ccc"},
+					RawConstraints: RawConstraints{"K1": "V1"},
 				},
 			},
 			args: args{
@@ -219,13 +219,13 @@ func TestDefinitionRepository_Generate(t *testing.T) {
 					Type:         "Test",
 					RawTemplates: []RawTemplate{"aaa{{.NestTest}}ccc"},
 				}, {
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"bbb"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"K1/": ".?1"}),
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"bbb"},
+					RawConstraints: RawConstraints{"K1/": ".?1"},
 				}, {
-					Type:         "NestTest",
-					RawTemplates: []RawTemplate{"xxx"},
-					Constraints:  newConstraintsOrPanic(RawConstraints{"K1/": ".?2"}),
+					Type:           "NestTest",
+					RawTemplates:   []RawTemplate{"xxx"},
+					RawConstraints: RawConstraints{"K1/": ".?2"},
 				},
 			},
 			args: args{

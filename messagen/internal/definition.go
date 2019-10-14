@@ -22,7 +22,7 @@ func (a Aliases) IsAlias(defType DefinitionType) bool {
 type RawDefinition struct {
 	Type           DefinitionType
 	RawTemplates   []RawTemplate
-	Constraints    *Constraints
+	RawConstraints RawConstraints
 	Aliases        Aliases
 	AllowDuplicate bool
 	OrderBy        []DefinitionType
@@ -31,8 +31,9 @@ type RawDefinition struct {
 
 type Definition struct {
 	*RawDefinition
-	ID        DefinitionID
-	Templates Templates
+	Constraints *Constraints
+	ID          DefinitionID
+	Templates   Templates
 }
 
 func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
@@ -41,21 +42,21 @@ func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
 		return nil, xerrors.Errorf("failed to create Definition: %w", err)
 	}
 
-	if rawDefinition.Constraints == nil {
-		constraints, err := NewConstraints(nil)
-		if err != nil {
-			return nil, xerrors.Errorf("failed to set empty constraints to definition: %w", err)
-		}
-		rawDefinition.Constraints = constraints
-	}
-
 	if rawDefinition.Weight == 0 {
 		rawDefinition.Weight = 1
 	}
-	return &Definition{
+	def := &Definition{
 		RawDefinition: rawDefinition,
 		Templates:     templates,
-	}, nil
+	}
+
+	constraints, err := NewConstraints(rawDefinition.RawConstraints)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to set empty constraints to definition: %w", err)
+	}
+	def.Constraints = constraints
+
+	return def, nil
 }
 
 func (d *Definition) CanBePicked(state *State) (bool, error) {
