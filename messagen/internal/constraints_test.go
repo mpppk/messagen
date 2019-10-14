@@ -97,13 +97,16 @@ func TestNewConstraints(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "create new Constraits struct",
+			name: "create new Constraints struct",
 			args: args{
 				raw: RawConstraints{"Key": "Value"},
 			},
 			want: &Constraints{
 				raw:    RawConstraints{"Key": "Value"},
 				defMap: map[DefinitionType]RawConstraintKey{"Key": "Key"},
+				values: []*Constraint{
+					newConstraintOrPanic("Key", "Value"),
+				},
 			},
 		},
 	}
@@ -115,7 +118,7 @@ func TestNewConstraints(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewConstraints() = %v, want %v", got, tt.want)
+				t.Errorf("NewConstraints() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}
