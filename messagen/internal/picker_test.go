@@ -80,3 +80,52 @@ func TestRandomWithWeightDefinitionPicker(t *testing.T) {
 		})
 	}
 }
+
+func TestSortByConstraintPriorityDefinitionPicker(t *testing.T) {
+	tests := []struct {
+		name           string
+		rawDefinitions []*RawDefinition
+		want           []DefinitionType
+		wantErr        bool
+	}{
+		{
+			name: "",
+			rawDefinitions: []*RawDefinition{
+				{
+					Type:           "Root0",
+					RawConstraints: RawConstraints{},
+				},
+				{
+					Type:           "Root1",
+					RawConstraints: RawConstraints{"A:3": "B"},
+				},
+				{
+					Type:           "Root2",
+					RawConstraints: RawConstraints{"A:4": "X"},
+				},
+				{
+					Type:           "Root3",
+					RawConstraints: RawConstraints{"A:2": "X", "B:2": "X"},
+				},
+			},
+			want:    []DefinitionType{"Root2", "Root3", "Root1", "Root0"},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			definitions := newDefinitionsOrPanic(tt.rawDefinitions...)
+			got, err := SortByConstraintPriorityDefinitionPicker(&definitions, nil)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SortByConstraintPriorityDefinitionPicker() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			for i, def := range got {
+				if def.Type != tt.want[i] {
+					t.Errorf("SortByConstraintPriorityDefinitionPicker()[%d] got = %v, want %v", i, def.Type, tt.want[i])
+				}
+			}
+		})
+	}
+}

@@ -101,8 +101,10 @@ func (c *Constraint) IsSatisfied(state *State) bool {
 }
 
 type Constraints struct {
-	raw    RawConstraints
-	defMap map[DefinitionType]RawConstraintKey
+	raw      RawConstraints
+	values   []*Constraint
+	defMap   map[DefinitionType]RawConstraintKey
+	Priority int
 }
 
 func NewConstraints(raw RawConstraints) (*Constraints, error) {
@@ -124,11 +126,13 @@ func NewConstraints(raw RawConstraints) (*Constraints, error) {
 
 func (c *Constraints) Set(rawKey RawConstraintKey, value RawConstraintValue) error {
 	c.raw[rawKey] = value
-	key, err := rawKey.Parse()
+	constraint, err := NewConstraint(rawKey, value)
 	if err != nil {
-		return xerrors.Errorf("failed to parse RawConstraintKey: %w", err)
+		return err
 	}
-	c.defMap[key.DefinitionType] = rawKey
+	c.defMap[constraint.key.DefinitionType] = rawKey
+	c.values = append(c.values, constraint)
+	c.Priority += constraint.key.Priority
 	return nil
 }
 
