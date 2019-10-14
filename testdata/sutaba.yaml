@@ -1,0 +1,43 @@
+Definitions:
+  - Type: Root
+    Templates:
+      - |-
+        ピピーッ❗️🔔⚡️スタバ警察です❗️👊👮❗️
+        {{.TweetCheck}}{{.SutabaDescription}}スタバ❗️❗️{{.GoodEmoji}}
+        {{.LastMessage}}
+    Constraints: {"Class": "Sutaba"}
+
+  - Type: Root
+    Templates:
+      - |-
+        ピピーッ❗️🔔⚡️スタバ警察です❗️👊👮❗️
+        アナタのツイート💕は❌スタバ法❌第{{.RuleNum}}条🙋
+        「スタバぢゃないツイートをスタバなうツイート💕してゎイケナイ❗️」
+        に違反しています😡今スグ消しなｻｲ❗️❗️❗️❗️✌️👮🔫
+    Constraints: {"Class": "Other", "Confidence/": "High|Medium"}
+
+  - Type: Root
+    Templates: ['{"class": "{{.Class}}", "confidence": {{.Confidence}} }']
+    Constraints: {"Debug:1": "on"}
+
+  - Type: TweetCheck
+    Templates:
+      - "{{.Exclamation}}このツイート{{.ThinkingEmoji}}{{.ThinkingEmoji}}{{.ThinkingEmoji}}..."
+      - "アアーーー❗️なんだこれはーーー❗️❗️"
+
+  - {"Type": "Exclamation", "Templates": ["ムムッ", "ヤヤッ", "オオッ"]}
+  - {"Type": "ThinkingEmoji", "Templates": ["🤔", "🤨"]}
+  - {"Type": "GoodEmoji", "Templates": ["😆", "😂"]}
+
+  - Type: SutabaDescription
+    Templates: ["完全に", "間違いなく"]
+    Constraints: {"Confidence": "High"}
+
+  - Type: SutabaDescription
+    Templates: ["おそらく", "多分"]
+    Constraints: {"Confidence": "Medium"}
+
+  - Type: LastMessage
+    Templates:
+      - "この調子でグッドなスタバツイートを心がけるようにッ❗️👮‍👮‍"
+      - "市民の協力に感謝するッッッ👮‍👮‍❗"

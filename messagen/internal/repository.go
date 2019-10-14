@@ -37,6 +37,8 @@ func NewDefinitionRepository(opt *DefinitionRepositoryOption) *DefinitionReposit
 	if opt != nil && opt.DefinitionPickers != nil {
 		definitionPickers = append(definitionPickers, opt.DefinitionPickers...)
 	}
+	// SortByConstraintPriorityDefinitionPicker must be applied last
+	definitionPickers = append(definitionPickers, SortByConstraintPriorityDefinitionPicker)
 
 	var templateValidators []TemplateValidator
 	if opt != nil && opt.TemplateValidators != nil {

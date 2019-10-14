@@ -2,6 +2,7 @@ package cmd
 
 import (
 	crand "crypto/rand"
+	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
@@ -43,7 +44,8 @@ func newRunCmd(fs afero.Fs) (*cobra.Command, error) {
 				return err
 			}
 
-			if msgs, err := generator.Generate(config.RootType, map[string]string{}, uint(config.Num)); err != nil {
+			printState(config.InitialState)
+			if msgs, err := generator.Generate(config.RootType, config.InitialState, uint(config.Num)); err != nil {
 				return err
 			} else {
 				for _, msg := range msgs {
@@ -59,6 +61,18 @@ func newRunCmd(fs afero.Fs) (*cobra.Command, error) {
 		return nil, err
 	}
 	return cmd, nil
+}
+
+func printState(state map[string]string) {
+	if len(state) == 0 {
+		return
+	}
+	fmt.Println("---- state ----")
+	for key, value := range state {
+		fmt.Println(key+":", value)
+	}
+	fmt.Println("---------------")
+	fmt.Println()
 }
 
 func setRunCmdFlags(cmd *cobra.Command, fs afero.Fs) error {
@@ -84,6 +98,14 @@ func setRunCmdFlags(cmd *cobra.Command, fs afero.Fs) error {
 				Usage: "Name of definition root type",
 			},
 			Value: "Root",
+		},
+		{
+			Flag: &option.Flag{
+				Name:      "state",
+				Shorthand: "s",
+				Usage:     "initial state",
+			},
+			Value: "",
 		},
 	}
 
