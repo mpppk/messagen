@@ -85,37 +85,47 @@ func TestSortByConstraintPriorityDefinitionPicker(t *testing.T) {
 	tests := []struct {
 		name           string
 		rawDefinitions []*RawDefinition
+		state          *State
 		want           []DefinitionType
 		wantErr        bool
 	}{
 		{
-			name: "",
+			name:  "",
+			state: NewState(MessageMap{"A": "X", "B": "X"}),
 			rawDefinitions: []*RawDefinition{
 				{
 					Type:           "Root0",
 					RawConstraints: RawConstraints{},
 				},
 				{
-					Type:           "Root1",
-					RawConstraints: RawConstraints{"A:3": "B"},
-				},
-				{
-					Type:           "Root2",
-					RawConstraints: RawConstraints{"A:4": "X"},
+					Type:           "Root0-1",
+					RawConstraints: RawConstraints{"A:9": "B"},
 				},
 				{
 					Type:           "Root3",
+					RawConstraints: RawConstraints{"A:3": "X"},
+				},
+				{
+					Type:           "Root4",
+					RawConstraints: RawConstraints{"A:4": "X"},
+				},
+				{
+					Type:           "Root4-1",
 					RawConstraints: RawConstraints{"A:2": "X", "B:2": "X"},
 				},
+				{
+					Type:           "Root2",
+					RawConstraints: RawConstraints{"A:2": "X", "B:2": "Z"},
+				},
 			},
-			want:    []DefinitionType{"Root2", "Root3", "Root1", "Root0"},
+			want:    []DefinitionType{"Root4", "Root4-1", "Root3", "Root2", "Root0", "Root0-1"},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			definitions := newDefinitionsOrPanic(tt.rawDefinitions...)
-			got, err := SortByConstraintPriorityDefinitionPicker(&definitions, nil)
+			got, err := SortByConstraintPriorityDefinitionPicker(&definitions, tt.state)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SortByConstraintPriorityDefinitionPicker() error = %v, wantErr %v", err, tt.wantErr)
 				return

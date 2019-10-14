@@ -65,9 +65,9 @@ func ConstraintsSatisfiedDefinitionPicker(definitions *Definitions, state *State
 	return newDefinitions, nil
 }
 
-func SortByConstraintPriorityDefinitionPicker(definitions *Definitions, _ *State) ([]*Definition, error) {
+func SortByConstraintPriorityDefinitionPicker(definitions *Definitions, state *State) ([]*Definition, error) {
 	sort.SliceStable(*definitions, func(i, j int) bool {
-		return (*definitions)[i].Constraints.Priority > (*definitions)[j].Constraints.Priority
+		return (*definitions)[i].Constraints.GetPriority(state) > (*definitions)[j].Constraints.GetPriority(state)
 	})
 	return *definitions, nil
 }
