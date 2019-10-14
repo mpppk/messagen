@@ -3,6 +3,8 @@ package internal
 import (
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestRawConstraintKeyRune_IsSpecial(t *testing.T) {
@@ -75,7 +77,7 @@ func TestRawConstraintKey_Parse(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "can par￿se",
+			name: "can parse",
 			r:    "Test",
 			want: &ConstraintKey{
 				Raw:                 "Test",
@@ -88,7 +90,7 @@ func TestRawConstraintKey_Parse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "can par￿se !",
+			name: "can parse !",
 			r:    "Test!",
 			want: &ConstraintKey{
 				Raw:                 "Test!",
@@ -101,7 +103,7 @@ func TestRawConstraintKey_Parse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "can par￿se ?",
+			name: "can parse ?",
 			r:    "Test?",
 			want: &ConstraintKey{
 				Raw:                 "Test?",
@@ -114,7 +116,7 @@ func TestRawConstraintKey_Parse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "can par￿se /",
+			name: "can parse /",
 			r:    "Test/",
 			want: &ConstraintKey{
 				Raw:                 "Test/",
@@ -127,7 +129,7 @@ func TestRawConstraintKey_Parse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "can be par￿sed",
+			name: "can be parsed",
 			r:    "Test?/",
 			want: &ConstraintKey{
 				Raw:                 "Test?/",
@@ -140,7 +142,47 @@ func TestRawConstraintKey_Parse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "can be par￿sed",
+			name: "priority",
+			r:    "Test:1",
+			want: &ConstraintKey{
+				Raw:            "Test:1",
+				DefinitionType: "Test",
+				Priority:       1,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "priority",
+			r:       "Test:1:1",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "priority",
+			r:       "Test:",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "priority",
+			r:       "Test:1+",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "priority",
+			r:    "Test?/:1",
+			want: &ConstraintKey{
+				Raw:                 "Test?/:1",
+				DefinitionType:      "Test",
+				Priority:            1,
+				HasRegExpValue:      true,
+				IsAllowedToNotExist: true,
+			},
+			wantErr: false,
+		},
+		{
+			name: "can be parsed",
 			r:    "Test+",
 			want: &ConstraintKey{
 				Raw:                 "Test+",
@@ -153,12 +195,11 @@ func TestRawConstraintKey_Parse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "can be par￿sed",
+			name:    "can not be parsed",
 			r:       "Test+/",
 			want:    nil,
 			wantErr: true,
 		},
-		// TODO: Add more tests
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -167,8 +208,8 @@ func TestRawConstraintKey_Parse(t *testing.T) {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Parse() got = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("Parse() diff:\n%s", diff)
 			}
 		})
 	}

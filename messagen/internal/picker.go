@@ -2,6 +2,7 @@ package internal
 
 import (
 	"math/rand"
+	"sort"
 
 	"golang.org/x/xerrors"
 )
@@ -62,6 +63,13 @@ func ConstraintsSatisfiedDefinitionPicker(definitions *Definitions, state *State
 		}
 	}
 	return newDefinitions, nil
+}
+
+func SortByConstraintPriorityDefinitionPicker(definitions *Definitions, state *State) ([]*Definition, error) {
+	sort.SliceStable(*definitions, func(i, j int) bool {
+		return (*definitions)[i].Constraints.GetPriority(state) > (*definitions)[j].Constraints.GetPriority(state)
+	})
+	return *definitions, nil
 }
 
 func pickDefinitionIndexRandomWithWeight(weights []DefinitionWeight) int {

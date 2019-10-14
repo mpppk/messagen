@@ -102,6 +102,7 @@ func (c *Constraint) IsSatisfied(state *State) bool {
 
 type Constraints struct {
 	raw    RawConstraints
+	values []*Constraint
 	defMap map[DefinitionType]RawConstraintKey
 }
 
@@ -124,11 +125,12 @@ func NewConstraints(raw RawConstraints) (*Constraints, error) {
 
 func (c *Constraints) Set(rawKey RawConstraintKey, value RawConstraintValue) error {
 	c.raw[rawKey] = value
-	key, err := rawKey.Parse()
+	constraint, err := NewConstraint(rawKey, value)
 	if err != nil {
-		return xerrors.Errorf("failed to parse RawConstraintKey: %w", err)
+		return err
 	}
-	c.defMap[key.DefinitionType] = rawKey
+	c.defMap[constraint.key.DefinitionType] = rawKey
+	c.values = append(c.values, constraint)
 	return nil
 }
 
@@ -173,4 +175,14 @@ func (c *Constraints) AreSatisfied(state *State) (bool, error) {
 		return false, xerrors.Errorf("failed to check constraints: %w", err)
 	}
 	return len(constraints.raw) == 0, nil
+}
+
+func (c *Constraints) GetPriority(state *State) int {
+	priority := 0
+	for _, constraint := range c.values {
+		if constraint.IsSatisfied(state) {
+			priority += constraint.key.Priority
+		}
+	}
+	return priority
 }
