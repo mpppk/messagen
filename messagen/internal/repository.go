@@ -246,7 +246,12 @@ func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRe
 					errChan <- err
 					return
 				}
-				stateChan <- newState
+				if ok, err := repo.applyTemplateValidators(defTemplate, newState); err != nil {
+					errChan <- err
+					return
+				} else if ok {
+					stateChan <- newState
+				}
 				continue
 			}
 			subStateChan, err := resolveDefDepends(defTemplate, newState, repo, def.Aliases)
@@ -266,7 +271,12 @@ func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRe
 					errChan <- err
 					return
 				}
-				stateChan <- newSatisfiedState
+				if ok, err := repo.applyTemplateValidators(defTemplate, newSatisfiedState); err != nil {
+					errChan <- err
+					return
+				} else if ok {
+					stateChan <- newSatisfiedState
+				}
 			}
 		}
 		close(stateChan)

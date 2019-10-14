@@ -281,6 +281,23 @@ func TestDefinitionRepository_Generate_WithValidator(t *testing.T) {
 					Type:         "Test",
 					RawTemplates: []RawTemplate{"xxx"},
 				},
+			},
+			args: args{
+				defType: "Test",
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "maxStrLen validator",
+			opt: &DefinitionRepositoryOption{
+				TemplateValidators: []TemplateValidator{MaxStrLenValidator(2)},
+			},
+			defs: []*RawDefinition{
+				{
+					Type:         "Test",
+					RawTemplates: []RawTemplate{"xxx"},
+				},
 				{
 					Type:         "Test",
 					RawTemplates: []RawTemplate{"{{.NestTest}}"},
