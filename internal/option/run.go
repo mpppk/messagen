@@ -38,6 +38,10 @@ func newRunCmdConfigFromRawConfig(rawConfig *RunCmdRawConfig) (*RunCmdConfig, er
 
 func parseKVStr(kvListStr string) (map[string]string, error) {
 	m := map[string]string{}
+	if kvListStr == "" {
+		return m, nil
+	}
+
 	kvList := strings.Split(kvListStr, ",")
 	for _, kv := range kvList {
 		keyAndValue := strings.Split(kv, "=")
