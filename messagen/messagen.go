@@ -44,15 +44,11 @@ func (d *Definition) toRawDefinition() (*internal.RawDefinition, error) {
 	for key, value := range d.Constraints {
 		rawConstraints[internal.RawConstraintKey(key)] = internal.RawConstraintValue(value)
 	}
-	constraints, err := internal.NewConstraints(rawConstraints)
-	if err != nil {
-		return nil, err
-	}
 
 	return &internal.RawDefinition{
 		Type:           internal.DefinitionType(d.Type),
 		RawTemplates:   rawTemplates,
-		Constraints:    constraints,
+		RawConstraints: rawConstraints,
 		AllowDuplicate: d.AllowDuplicate,
 		Aliases:        newAliases(d.Aliases),
 		OrderBy:        d.getOrderBy(),

@@ -47,7 +47,7 @@ func TestDefinition_CanBePicked(t *testing.T) {
 				&RawDefinition{
 					Type:           "Root",
 					RawTemplates:   []RawTemplate{""},
-					Constraints:    newConstraintsOrPanic(RawConstraints{"Key": "Value"}),
+					RawConstraints: RawConstraints{"Key": "Value"},
 					Aliases:        Aliases{},
 					AllowDuplicate: false,
 					Weight:         0,
@@ -65,7 +65,7 @@ func TestDefinition_CanBePicked(t *testing.T) {
 				&RawDefinition{
 					Type:           "Root",
 					RawTemplates:   []RawTemplate{""},
-					Constraints:    newConstraintsOrPanic(RawConstraints{"Key": "Value"}),
+					RawConstraints: RawConstraints{"Key": "Value"},
 					Aliases:        Aliases{},
 					AllowDuplicate: false,
 					Weight:         0,
