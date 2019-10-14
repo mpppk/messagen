@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"golang.org/x/xerrors"
@@ -36,9 +38,15 @@ func (r RawConstraintKey) toReversedRunes() (rawLabelRunes []RawConstraintKeyRun
 func (r RawConstraintKey) Parse() (*ConstraintKey, error) {
 	constraintKey := &ConstraintKey{Raw: r}
 
-	index := len(r)
-	for i := len(r) - 1; i >= 0; i-- {
-		ru := RawConstraintKeyRune([]rune(r)[i])
+	remainKey, priority, err := r.parsePriority()
+	if err != nil {
+		return nil, err
+	}
+	constraintKey.Priority = priority
+
+	index := len(remainKey)
+	for i := len(remainKey) - 1; i >= 0; i-- {
+		ru := RawConstraintKeyRune([]rune(remainKey)[i])
 		if !ru.IsSpecial() {
 			index = i
 			break
@@ -47,11 +55,29 @@ func (r RawConstraintKey) Parse() (*ConstraintKey, error) {
 			return nil, xerrors.Errorf("failed to parse constraint key: %w", err)
 		}
 	}
-	constraintKey.DefinitionType = DefinitionType([]rune(r)[:index+1])
+	constraintKey.DefinitionType = DefinitionType([]rune(remainKey)[:index+1])
 	if ok, reason := constraintKey.IsValid(); !ok {
 		return nil, xerrors.Errorf("failed to parse constraint key: %s", reason)
 	}
 	return constraintKey, nil
+}
+
+func (r RawConstraintKey) parsePriority() (string, int, error) {
+	chunks := strings.Split(string(r), ":")
+	colonNum := len(chunks) - 1
+	if colonNum == 0 {
+		return string(r), 0, nil
+	}
+
+	if colonNum > 1 {
+		return "", 0, fmt.Errorf("invalid constraint key: 2 or more colon found: %s", r)
+	}
+
+	priority, err := strconv.Atoi(chunks[1])
+	if err != nil {
+		return "", 0, xerrors.Errorf("failed to extract constraint priority from %s: %w", r, err)
+	}
+	return chunks[0], priority, nil
 }
 
 type ConstraintKey struct {
@@ -61,6 +87,7 @@ type ConstraintKey struct {
 	IsAllowedToNotExist bool
 	MustNotExist        bool
 	WillAddValue        bool
+	Priority            int
 }
 
 func (l *ConstraintKey) update(rlr RawConstraintKeyRune) error {
