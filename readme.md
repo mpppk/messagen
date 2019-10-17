@@ -192,6 +192,26 @@ func main() {
 	// Second argument represent initial state.
     // Third argument represent num of messages.
 	messages, _ := generator.Generate("Root", initialState, 1)
-    fmt.Println(messages[0])
+    fmt.Println(messages[0]) 
+    // output:
+    // She is Emily.
 }
 ```
+
+## Advanced tutorial
+### Constraints Operator
+Constraints Operator is special operation to constraint checking process.
+It is expressed as an arbitrary number of symbols as a constraint key suffix, like `SomeKey?/`.
+Here are available constraints operators list.
+
+`?` operator means that this definition can be picked even if this constraint key does not exist.  
+`+` operator is the same as `?`, but add constraint key and value to state if they do not exist.   
+ that this constraints can be picked even if this constraint key does not exist.  
+`!` operator means that this definition can be picked only if this constraint value is different from the value in state.  
+`/` operator means that this constraint value is evaluated as regular expression.
+
+### Constraints Priority
+### Definition Resolution Order
+### Definition Weight
+### Alias
+
