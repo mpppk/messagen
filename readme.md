@@ -337,7 +337,7 @@ definition := Definition{
 }
 ```
 
-### picker
+### pickers
 There are times when you want to do advanced message generation that cannot be handled with the built-in constraints system. 
 You can use `picker` to apply user-defined constraints.
 
