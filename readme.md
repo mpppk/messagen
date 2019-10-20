@@ -222,7 +222,7 @@ The default priority is zero, so if the below definitions are provided, the firs
     Templates: ["a"]
     Constraints: {"Key:1": "Value"}
 
-# This definition has constraints but any priority is not specified,
+# This definition has constraints, but any priority is not specified,
 # so priority is zero.
  - Type: Root
     Templates: ["b"]
@@ -308,4 +308,125 @@ Definitions:
 ```bash
 $ messagen -f test.yaml
 messagen is a minimal and powerful message generator.
+```
+
+## golang tutorial
+
+Here is a brief explanation.
+If you want to check more details, see [godoc](https://godoc.org/github.com/mpppk/messagen/messagen).
+
+### Definition
+
+You can specify messagen functions like constraints, aliases, and others by create definition struct.
+
+```go
+aliases := map[string]*Alias{
+    "AnotherFirstName": &Alias{
+        Type: "FirstName",
+        AllowDuplicate: false,
+    },
+}
+
+definition := Definition{
+    Type:        "Root",
+    Templates:   []string{"They are {{.FirstName}} and {{.AnotherFirstName}}."},
+    Constraints: map[string]string{"Mode": "Introduce"},
+    Aliases: aliases,
+    Order: []string{},
+    Weight: 0.5,
+}
+```
+
+### picker
+There are times when you want to do advanced message generation that cannot be handled with the built-in constraints system. 
+You can use `picker` to apply user-defined constraints.
+
+There are two types of picker: `Definition picker` and `Template picker`.
+pickersの設定方法
+
+#### Definition picker
+Definition picker is a function that determines the order in which definitions are picked when a definition type is given.
+Definition picker receives two arguments: `Definitions` and `State`, and returns the definition list.
+You can filter and rearrange the definitions, then return them.
+
+```go
+type DefinitionPicker func(defs *Definitions, state *State) ([]*Definition, error)
+```
+
+Below is an implementation of a definition picker that is used inside messagen to check whether constraints are satisfied.
+
+```go
+func ConstraintsSatisfiedDefinitionPicker(definitions *Definitions, state *State) ([]*Definition, error) {
+   var newDefinitions Definitions
+   for _, def := range *definitions {
+      if ok, err := def.CanBePicked(state); err != nil {
+         return nil, err
+      } else if ok {
+         newDefinitions = append(newDefinitions, def)
+      }
+   }
+   return newDefinitions, nil
+}
+```
+
+### Template picker
+Template picker is a function that determines the order in which templates are picked when a definition is picked.
+Template picker receives two arguments: `DefinitionWithAlias` and `State`, and returns Templates.
+You can filter and rearrange the templates, then return them.
+
+```go
+type TemplatePicker func(def *DefinitionWithAlias, state *State) (Templates, error)
+```
+
+Below is an implementation of template picker that is used inside messagen to select a template randomly.
+
+```go
+func RandomTemplatePicker(def *DefinitionWithAlias, state *State) (Templates, error) {
+   templates := def.Templates
+   var newTemplates Templates
+   for {
+      if len(templates) == 0 {
+         break
+      }
+      tmpl, ok := templates.PopRandom()
+      if !ok {
+         return nil, xerrors.Errorf("failed to pop template randomly from %v", templates)
+      }
+      newTemplates = append(newTemplates, tmpl)
+   }
+   return newTemplates, nil
+}
+```
+
+### validator
+The validator is a function that determines whether the current template and state are valid.
+Template validator receives two arguments: `Template` and `State`, then do your validation and returns as boolean.
+
+```go
+type TemplateValidator = func(template *Template, state *State) (bool, error)
+```
+
+For example, if you want to post generated messages to twitter, a number of characters must be limited to 280. To cover such cases, messagen has `MaxStrLenValidator`.
+
+```go
+func MaxStrLenValidator(maxLen int) func(template *Template, state *State) (bool, error) {
+   return func(template *Template, state *State) (bool, error) {
+      incompleteMsg, _, err := template.ExecuteWithIncompleteState(state)
+      if err != nil {
+         return false, err
+      }
+      return utf8.RuneCountInString(string(incompleteMsg)) <= maxLen, nil
+   }
+}
+```
+
+### Pass pickers and validators to messagen
+You can pass pickers and validators to messagen as `messagen.Option`.
+
+```go
+   opt := &messagen.Option{
+      TemplatePickers:    []messagen.TemplatePicker{messagen.RandomTemplatePicker, IrohaTemplatePicker},
+      TemplateValidators: []messagen.TemplateValidator{IrohaTemplateValidator},
+   }
+   generator, err := messagen.New(opt)
 ```
