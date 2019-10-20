@@ -18,7 +18,6 @@ func panicIfErrExist(err error) {
 
 func main() {
 	opt := &messagen.Option{
-		TemplatePickers:    []messagen.TemplatePicker{messagen.RandomTemplatePicker, IrohaTemplatePicker},
 		TemplateValidators: []messagen.TemplateValidator{IrohaTemplateValidator},
 	}
 	generator, err := messagen.New(opt)
@@ -48,25 +47,6 @@ func main() {
 	}()
 
 	wg.Wait()
-}
-
-func IrohaTemplatePicker(def *messagen.DefinitionWithAlias, state *messagen.State) (messagen.Templates, error) {
-	var newTemplates messagen.Templates
-	for _, template := range def.Templates {
-		if !template.IsSatisfiedState(state) {
-			newTemplates = append(newTemplates, template)
-			continue
-		}
-		msg, err := template.Execute(state)
-		if err != nil {
-			return nil, err
-		}
-		if HasDuplicatedRune(NormalizeKatakanaWord(string(msg))) {
-			continue
-		}
-		newTemplates = append(newTemplates, template)
-	}
-	return newTemplates, nil
 }
 
 func IrohaTemplateValidator(template *messagen.Template, state *messagen.State) (bool, error) {
