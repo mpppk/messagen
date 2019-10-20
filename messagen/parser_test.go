@@ -28,7 +28,7 @@ func TestParseYaml(t *testing.T) {
 						Constraints:    nil,
 						Aliases:        nil,
 						AllowDuplicate: false,
-						OrderBy:        nil,
+						Order:          nil,
 						Weight:         0,
 					},
 				},

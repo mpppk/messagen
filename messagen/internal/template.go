@@ -40,9 +40,9 @@ func (d *DefinitionTypes) deleteByIndex(i int) {
 	*d = append((*d)[:i], (*d)[i+1:]...)
 }
 
-func (d *DefinitionTypes) sortByOrderBy(orderBy DefinitionTypes) {
+func (d *DefinitionTypes) sortByOrder(order DefinitionTypes) {
 	var defs []DefinitionType
-	for _, o := range orderBy {
+	for _, o := range order {
 		for i, def := range *d {
 			if def == o {
 				defs = append(defs, d.popByIndex(i))
@@ -64,14 +64,14 @@ type Template struct {
 	tmpl    *template.Template
 }
 
-func NewTemplate(rawTemplate RawTemplate, orderBy []DefinitionType) (*Template, error) {
+func NewTemplate(rawTemplate RawTemplate, order []DefinitionType) (*Template, error) {
 	defTypes := rawTemplate.extractDefRefTypeFromRawTemplate()
 	tmpl, err := template.New(string(rawTemplate)).Parse(string(rawTemplate))
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create new template: %w", err)
 	}
 
-	defTypes.sortByOrderBy(orderBy)
+	defTypes.sortByOrder(order)
 
 	return &Template{
 		Raw:     rawTemplate,
@@ -155,10 +155,10 @@ func (t *Template) Equals(template *Template) bool {
 
 type Templates []*Template
 
-func NewTemplates(rawTemplates []RawTemplate, orderBy []DefinitionType) (Templates, error) {
+func NewTemplates(rawTemplates []RawTemplate, order []DefinitionType) (Templates, error) {
 	var templates []*Template
 	for _, rawTemplate := range rawTemplates {
-		t, err := NewTemplate(rawTemplate, orderBy)
+		t, err := NewTemplate(rawTemplate, order)
 		if err != nil {
 			return nil, xerrors.Errorf("failed to create Templates: %w", err)
 		}
@@ -214,10 +214,10 @@ func (t *Templates) Add(template *Template) {
 	*t = append(*t, template)
 }
 
-func (t *Templates) Copy(orderBy []DefinitionType) (Templates, error) {
+func (t *Templates) Copy(order []DefinitionType) (Templates, error) {
 	var newRawTemplates []RawTemplate
 	for _, tmpl := range *t {
 		newRawTemplates = append(newRawTemplates, tmpl.Raw)
 	}
-	return NewTemplates(newRawTemplates, orderBy)
+	return NewTemplates(newRawTemplates, order)
 }

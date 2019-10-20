@@ -11,7 +11,7 @@ type Definition struct {
 	Constraints    map[string]string `yaml:"Constraints"`
 	Aliases        map[string]*Alias `yaml:"Aliases"`
 	AllowDuplicate bool              `yaml:"AllowDuplicate"`
-	OrderBy        []string          `yaml:"OrderBy"`
+	Order          []string          `yaml:"Order"`
 	Weight         float32           `yaml:"Weight"`
 }
 
@@ -51,14 +51,14 @@ func (d *Definition) toRawDefinition() (*internal.RawDefinition, error) {
 		RawConstraints: rawConstraints,
 		AllowDuplicate: d.AllowDuplicate,
 		Aliases:        newAliases(d.Aliases),
-		OrderBy:        d.getOrderBy(),
+		Order:          d.getOrder(),
 		Weight:         internal.DefinitionWeight(d.Weight),
 	}, nil
 }
 
-func (d *Definition) getOrderBy() (orderBy []internal.DefinitionType) {
-	for _, o := range d.OrderBy {
-		orderBy = append(orderBy, internal.DefinitionType(o))
+func (d *Definition) getOrder() (order []internal.DefinitionType) {
+	for _, o := range d.Order {
+		order = append(order, internal.DefinitionType(o))
 	}
 	return
 }

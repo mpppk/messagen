@@ -25,7 +25,7 @@ type RawDefinition struct {
 	RawConstraints RawConstraints
 	Aliases        Aliases
 	AllowDuplicate bool
-	OrderBy        []DefinitionType
+	Order          []DefinitionType
 	Weight         DefinitionWeight
 }
 
@@ -37,7 +37,7 @@ type Definition struct {
 }
 
 func NewDefinition(rawDefinition *RawDefinition) (*Definition, error) {
-	templates, err := NewTemplates(rawDefinition.RawTemplates, rawDefinition.OrderBy)
+	templates, err := NewTemplates(rawDefinition.RawTemplates, rawDefinition.Order)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create Definition: %w", err)
 	}
@@ -73,7 +73,7 @@ func (d *Definition) IsAlias(defType DefinitionType) bool {
 
 func (d *Definition) Copy() (*Definition, error) {
 	def := *d
-	templates, err := def.Templates.Copy(def.OrderBy)
+	templates, err := def.Templates.Copy(def.Order)
 	if err != nil {
 		return nil, err
 	}

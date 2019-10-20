@@ -107,14 +107,14 @@ func TestNewDefinition(t *testing.T) {
 				rawDefinition: &RawDefinition{
 					Type:         "Root",
 					RawTemplates: []RawTemplate{"{{.aaa}} {{.bbb}}"},
-					OrderBy:      []DefinitionType{"bbb"},
+					Order:        []DefinitionType{"bbb"},
 				},
 			},
 			want: &Definition{
 				RawDefinition: &RawDefinition{
 					Type:         "Root",
 					RawTemplates: []RawTemplate{"{{.aaa}} {{.bbb}}"},
-					OrderBy:      []DefinitionType{"bbb"},
+					Order:        []DefinitionType{"bbb"},
 				},
 				ID:        0,
 				Templates: newTemplatesOrPanic([]DefinitionType{"bbb"}, "{{.aaa}} {{.bbb}}"),
