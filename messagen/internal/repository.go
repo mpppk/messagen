@@ -167,7 +167,7 @@ func (d *DefinitionRepository) Start(defType DefinitionType, initialState *State
 
 func (d *DefinitionRepository) applyTemplatePickers(def *DefinitionWithAlias, state *State) (newTemplates Templates, err error) {
 	newDef := *def
-	newTemplates, err = def.Templates.Copy(newDef.OrderBy)
+	newTemplates, err = def.Templates.Copy(newDef.Order)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +242,7 @@ func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRe
 	go func() {
 		for _, defTemplate := range templates {
 			defTemplate := defTemplate
-			newState := state.Copy(def.OrderBy)
+			newState := state.Copy(def.Order)
 			if len(*defTemplate.Depends) == 0 {
 				if err := newState.Update(def, defTemplate, Message(defTemplate.Raw)); err != nil {
 					errChan <- err
@@ -270,7 +270,7 @@ func resolveTemplates(def *DefinitionWithAlias, state *State, repo *DefinitionRe
 						return
 					}
 
-					newSatisfiedState := satisfiedState.Copy(def.OrderBy)
+					newSatisfiedState := satisfiedState.Copy(def.Order)
 					if err := newSatisfiedState.Update(def, defTemplate, msg); err != nil {
 						errChan <- err
 						return

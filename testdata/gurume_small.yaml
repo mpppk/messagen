@@ -6,7 +6,7 @@ Definitions:
         {{.Location}}には全ての人間を虜にする禁断の{{.FoodName}}がある
         これが{{.FoodDescription}}で超絶美味いからぜひ全国の{{.FoodCategory}}好き、
         {{.FoodCategory}}を愛する者たち、{{.FoodCategory}}を憎む者たち、全ての{{.FoodCategory}}関係者に伝われ
-    OrderBy: ["FoodName"]
+    Order: ["FoodName"]
 
   - Type: FoodName
     Templates: ["いちごケーキ", "モンブラン"]

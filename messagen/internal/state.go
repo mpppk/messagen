@@ -16,10 +16,10 @@ func (m MessageMap) copy() MessageMap {
 
 type PickedTemplateMap map[DefinitionID]*Templates
 
-func (p PickedTemplateMap) copy(orderBy []DefinitionType) (PickedTemplateMap, error) {
+func (p PickedTemplateMap) copy(order []DefinitionType) (PickedTemplateMap, error) {
 	newP := PickedTemplateMap{}
 	for id, templates := range p {
-		newTemplates, err := templates.Copy(orderBy)
+		newTemplates, err := templates.Copy(order)
 		if err != nil {
 			return nil, err
 		}
@@ -152,9 +152,9 @@ func (s *State) IsPickedTemplate(defID DefinitionID, template *Template) bool {
 	return false
 }
 
-func (s *State) Copy(orderBy []DefinitionType) *State {
+func (s *State) Copy(order []DefinitionType) *State {
 	ns := NewState(s.m.copy())
-	pickedTemplates, err := s.pickedTemplates.copy(orderBy)
+	pickedTemplates, err := s.pickedTemplates.copy(order)
 	if err != nil {
 		panic(err) // FIXME
 	}

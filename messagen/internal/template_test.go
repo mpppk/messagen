@@ -6,16 +6,16 @@ import (
 	"text/template"
 )
 
-func newTemplateOrPanic(rawTemplate RawTemplate, orderBy []DefinitionType) *Template {
-	t, err := NewTemplate(rawTemplate, orderBy)
+func newTemplateOrPanic(rawTemplate RawTemplate, order []DefinitionType) *Template {
+	t, err := NewTemplate(rawTemplate, order)
 	if err != nil {
 		panic(err)
 	}
 	return t
 }
 
-func newTemplatesOrPanic(orderBy []DefinitionType, rawTemplates ...RawTemplate) Templates {
-	templates, err := NewTemplates(rawTemplates, orderBy)
+func newTemplatesOrPanic(order []DefinitionType, rawTemplates ...RawTemplate) Templates {
+	templates, err := NewTemplates(rawTemplates, order)
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +46,7 @@ func TestRawTemplate_extractDefRefIDFromRawTemplate(t *testing.T) {
 func TestNewTemplate(t *testing.T) {
 	type args struct {
 		rawTemplate RawTemplate
-		orderBy     []DefinitionType
+		order       []DefinitionType
 	}
 	tests := []struct {
 		name    string
@@ -65,10 +65,10 @@ func TestNewTemplate(t *testing.T) {
 			},
 		},
 		{
-			name: "should consider OrderBy",
+			name: "should consider Order",
 			args: args{
 				rawTemplate: "{{.id1}}test{{.id2}}",
-				orderBy:     DefinitionTypes{"id2", "id1"},
+				order:       DefinitionTypes{"id2", "id1"},
 			},
 			want: &Template{
 				Raw:     "{{.id1}}test{{.id2}}",
@@ -76,10 +76,10 @@ func TestNewTemplate(t *testing.T) {
 			},
 		},
 		{
-			name: "should consider OrderBy",
+			name: "should consider Order",
 			args: args{
 				rawTemplate: "{{.id1}}{{.id2}}{{.id3}}",
-				orderBy:     DefinitionTypes{"id3", "id1"},
+				order:       DefinitionTypes{"id3", "id1"},
 			},
 			want: &Template{
 				Raw:     "{{.id1}}{{.id2}}{{.id3}}",
@@ -89,7 +89,7 @@ func TestNewTemplate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewTemplate(tt.args.rawTemplate, tt.args.orderBy)
+			got, err := NewTemplate(tt.args.rawTemplate, tt.args.order)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewTemplate() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -334,9 +334,9 @@ func TestTemplates_Subtract(t *testing.T) {
 	}
 }
 
-func TestDefinitionTypes_sortByOrderBy(t *testing.T) {
+func TestDefinitionTypes_sortByOrder(t *testing.T) {
 	type args struct {
-		orderBy DefinitionTypes
+		order DefinitionTypes
 	}
 	tests := []struct {
 		name                string
@@ -353,9 +353,9 @@ func TestDefinitionTypes_sortByOrderBy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.d.sortByOrderBy(tt.args.orderBy)
+			tt.d.sortByOrder(tt.args.order)
 			if !reflect.DeepEqual(*tt.d, tt.wantDefinitionTypes) {
-				t.Errorf("Templates.sortByOrderBy() = %v, want %v", tt.d, tt.wantDefinitionTypes)
+				t.Errorf("Templates.sortByOrder() = %v, want %v", tt.d, tt.wantDefinitionTypes)
 			}
 		})
 	}
