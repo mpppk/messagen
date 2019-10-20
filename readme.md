@@ -1,5 +1,5 @@
 # messagen
-[![GoDoc](https://godoc.org/github.com/mpppk/messagen/messagen?status.svg)](https://godoc.org/github.com/mpppk/messagen)
+[![GoDoc](https://godoc.org/github.com/mpppk/messagen/messagen?status.svg)](https://godoc.org/github.com/mpppk/messagen/messagen)
 
 messagen is the tree-structured message generator with flexible constraints and declarative API.
 You can use messagen as a CLI tool or golang library. 
@@ -211,9 +211,9 @@ Here are available constraints operators list.
 
 ### Constraints Priority
 The constraint priority is the priority for specifying the definition selection order according to the satisfied constraints.
-Constraint priority can be specified with colon and number in constraint key like `SomeKey:1`.
+Constraint priority can be specified with colon and number in constraint key as suffix like `SomeKey:1`.
 If there are multiple definitions with the same definition type, messagen preferentially picks up the definition with the highest priority.
-The default priority is zero, so if the below definitions are provided, the first definition is always picked up because it has 1 constraint priority, and others have zero. If some definitions have the same priority, the order depends on the other definitions picker implementations.
+The default priority is zero, so if the below definitions are provided, the first definition is always picked up because it has highest(1) constraint priority, and others have zero. If some definitions have the same priority, the order depends on the other definitions picker implementations.
  
 ```yaml
  # This definition is always picked 
@@ -241,6 +241,7 @@ The default priority is zero, so if the below definitions are provided, the firs
 
 ```bash
 $ messagen -f test.yaml --state Key=Value
+a
 ```
 
 ### Definition Resolution Order
@@ -295,14 +296,14 @@ messagen is a powerful and powerful message generator.
 
 By using an alias, you can retrieve different values from the same definition group.
 
-```
+```yaml
 Definitions:
   - Type: Root
     Templates: ["messagen is a {{.Adjective}} and {{.AnotherAdjective}} message generator."]
-  - Type: Adjective
-    Templates: ["powerful", "user friendly", "minimal"]
     Aliases:
       AnotherAdjective: {"Type": "Adjective", "AllowDuplicate": false}
+  - Type: Adjective
+    Templates: ["powerful", "user friendly", "minimal"]
 ```
 
 ```bash
@@ -317,7 +318,7 @@ If you want to check more details, see [godoc](https://godoc.org/github.com/mppp
 
 ### Definition
 
-You can specify messagen functions like constraints, aliases, and others by create definition struct.
+You can use messagen features like constraints, aliases, and others by create definition struct.
 
 ```go
 aliases := map[string]*Alias{
@@ -342,7 +343,6 @@ There are times when you want to do advanced message generation that cannot be h
 You can use `picker` to apply user-defined constraints.
 
 There are two types of picker: `Definition picker` and `Template picker`.
-pickersの設定方法
 
 #### Definition picker
 Definition picker is a function that determines the order in which definitions are picked when a definition type is given.
