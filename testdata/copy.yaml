@@ -1,0 +1,20 @@
+Definitions:
+  - Type: Root
+    Templates:
+      - "無人島に持って行きたい{{.Product}}"
+      - "{{.Product}}を{{.IfAction}}、自信が生まれる"
+      - "{{.Product}}を{{.Action}}前に知っておいて欲しいこと"
+
+  - Type: Action
+    Templates: ["食べる"]
+    Constraints: {"Genre": "Food"}
+  - Type: Action
+    Templates: ["買う"]
+    Constraints: {"Genre": "Other"}
+
+  - Type: IfAction
+    Templates: ["食べれば"]
+    Constraints: {"Genre": "Food"}
+  - Type: IfAction
+    Templates: ["買えば"]
+    Constraints: {"Genre": "Other"}

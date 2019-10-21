@@ -22,11 +22,3 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-brew:
-  github:
-    owner: mpppk
-    name: homebrew-mpppk
-  homepage: "https://github.com/mpppk/messagen"
-  description: "tree-structured message generator with "
-  test: |
-    system "#{bin}/messagen --help"
