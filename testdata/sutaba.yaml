@@ -23,7 +23,10 @@ Definitions:
   - Type: TweetCheck
     Templates:
       - "{{.Exclamation}}このツイート{{.ThinkingEmoji}}{{.ThinkingEmoji}}{{.ThinkingEmoji}}..."
-      - "アアーーー❗️なんだこれはーーー❗️❗️"
+
+  - Type: TweetCheck
+    Templates: ["アアーーー❗️なんだこれはーーー❗️❗️"]
+    Weight: 0.5
 
   - {"Type": "Exclamation", "Templates": ["ムムッ", "ヤヤッ", "オオッ"]}
   - {"Type": "ThinkingEmoji", "Templates": ["🤔", "🤨"]}

@@ -1,0 +1,33 @@
+Definitions:
+  - Type: Root
+    Templates:
+      - |-
+        フルーツ10連ガチャの結果↓
+        {{.Item}}
+        {{.Item2}}
+        {{.Item3}}
+        {{.Item4}}
+        {{.Item5}}
+        {{.Item6}}
+        {{.Item7}}
+        {{.Item8}}
+        {{.Item9}}
+        {{.Item10}}
+    Aliases:
+      Item2: &item {"Type": "Item", "AllowDuplicate": true}
+      Item3: *item
+      Item4: *item
+      Item5: *item
+      Item6: *item
+      Item7: *item
+      Item8: *item
+      Item9: *item
+      Item10: *item
+  - Type: Item
+    Templates: ["SR[ドラゴンフルーツ]", "SR[マンゴー]"]
+    Weight: 0.1
+  - Type: Item
+    Templates: ["R[メロン]", "R[スイカ]"]
+    Weight: 0.4
+  - Type: Item
+    Templates: ["N[りんご]", "N[みかん]", "N[バナナ]"]
