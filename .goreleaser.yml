@@ -27,6 +27,6 @@ brew:
     owner: mpppk
     name: homebrew-mpppk
   homepage: "https://github.com/mpppk/messagen"
-  description: "some description"
+  description: "tree-structured message generator with "
   test: |
-    system "#{bin}/hlb --help"
+    system "#{bin}/messagen --help"
