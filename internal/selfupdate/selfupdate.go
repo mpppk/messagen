@@ -7,7 +7,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const Version = "0.0.1"
+const Version = "0.0.2"
 const slug = "mpppk/messagen"
 
 // Do execute updating binary
