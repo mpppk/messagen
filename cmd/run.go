@@ -30,7 +30,7 @@ func newRunCmd(fs afero.Fs) (*cobra.Command, error) {
 				rand.Seed(seed.Int64())
 			}
 
-			msgConfig, err := messagen.ParseYamlFile(config.FilePath)
+			msgConfig, err := messagen.ParseYamlFileOrUrl(config.FilePath)
 			if err != nil {
 				return err
 			}
