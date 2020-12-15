@@ -3,7 +3,7 @@ module github.com/mpppk/messagen
 go 1.12
 
 require (
-	github.com/blang/semver v3.8.0+incompatible
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/google/go-cmp v0.5.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/rhysd/go-github-selfupdate v1.2.2
