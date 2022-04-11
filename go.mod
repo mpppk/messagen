@@ -11,6 +11,6 @@ require (
 	github.com/spf13/cobra v0.0.7
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.9.0
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f
 	gopkg.in/yaml.v2 v2.4.0
 )
