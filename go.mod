@@ -1,6 +1,6 @@
 module github.com/mpppk/messagen
 
-go 1.12
+go 1.18
 
 require (
 	github.com/blang/semver v3.8.0+incompatible
