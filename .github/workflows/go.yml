@@ -13,11 +13,7 @@ jobs:
           - macOS-latest
     steps:
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.goversion }}
-      id: go
+    - uses: actions/setup-go@v5
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
