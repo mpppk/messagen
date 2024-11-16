@@ -34,4 +34,3 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: make build-image
-      - run: make run-image-with-pokemon
