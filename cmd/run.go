@@ -52,7 +52,6 @@ func newRunCmd(fs afero.Fs) (*cobra.Command, error) {
 			} else {
 				for _, msg := range msgs {
 					cmd.Println(msg)
-					cmd.Println()
 				}
 			}
 
