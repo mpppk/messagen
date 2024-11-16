@@ -44,7 +44,9 @@ func newRunCmd(fs afero.Fs) (*cobra.Command, error) {
 				return err
 			}
 
-			printState(config.InitialState)
+			if config.Verbose {
+				printState(config.InitialState)
+			}
 			if msgs, err := generator.Generate(config.RootType, config.InitialState, uint(config.Num)); err != nil {
 				return err
 			} else {
@@ -120,6 +122,17 @@ func setRunCmdFlags(cmd *cobra.Command, fs afero.Fs) error {
 		},
 	}
 
+	boolFlags := []*option.BoolFlag{
+		{
+			Flag: &option.Flag{
+				Name:      "verbose",
+				Shorthand: "v",
+				Usage:     "verbose",
+			},
+			Value: false,
+		},
+	}
+
 	for _, stringFlag := range stringFlags {
 		if err := option.RegisterStringFlag(cmd, stringFlag); err != nil {
 			return err
@@ -128,6 +141,12 @@ func setRunCmdFlags(cmd *cobra.Command, fs afero.Fs) error {
 
 	for _, intFlag := range intFlags {
 		if err := option.RegisterIntFlag(cmd, intFlag); err != nil {
+			return err
+		}
+	}
+
+	for _, boolFlag := range boolFlags {
+		if err := option.RegisterBoolFlag(cmd, boolFlag); err != nil {
 			return err
 		}
 	}
