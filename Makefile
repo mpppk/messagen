@@ -32,6 +32,6 @@ cross-build:
 install:
 	go install
 
-.PHONY: circleci
-circleci:
-	circleci build -e GITHUB_TOKEN=$GITHUB_TOKEN
+.PHONY: release
+install:
+	goreleaser release
