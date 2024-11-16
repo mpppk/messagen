@@ -13,6 +13,7 @@ type RunCmdConfig struct {
 	RootType     string
 	Num          int
 	InitialState map[string]string
+	Verbose      bool
 }
 
 func NewRunCmdConfigFromViper() (*RunCmdConfig, error) {
@@ -33,6 +34,7 @@ func newRunCmdConfigFromRawConfig(rawConfig *RunCmdRawConfig) (*RunCmdConfig, er
 		RootType:     rawConfig.Root,
 		Num:          rawConfig.Num,
 		InitialState: state,
+		Verbose:      rawConfig.Verbose,
 	}, nil
 }
 
@@ -63,8 +65,9 @@ func newRunCmdRawConfig() (*RunCmdRawConfig, error) {
 }
 
 type RunCmdRawConfig struct {
-	File  string
-	Root  string
-	Num   int
-	State string // TODO: viper cannot parse map[string]string correctly. See https://github.com/spf13/viper/issues/608
+	File    string
+	Root    string
+	Num     int
+	State   string // TODO: viper cannot parse map[string]string correctly. See https://github.com/spf13/viper/issues/608
+	Verbose bool
 }
