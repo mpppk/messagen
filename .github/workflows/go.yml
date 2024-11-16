@@ -11,9 +11,6 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
-        goversion:
-          - 1.12
-          - 1.13
     steps:
 
     - name: Set up Go
