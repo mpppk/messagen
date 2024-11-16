@@ -28,3 +28,10 @@ jobs:
 
     - name: Build
       run: make build
+
+  build-image:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - run: make build-image
+      - run: make run-image-with-pokemon

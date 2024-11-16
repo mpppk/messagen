@@ -16,10 +16,6 @@ integration-test: deps
 coverage:
 	go test -race -coverprofile=coverage.txt -covermode=atomic ./...
 
-.PHONY: codecov
-codecov:  coverage
-	bash <(curl -s https://codecov.io/bash)
-
 .PHONY: build
 build:
 	go build -o messagen.bin
@@ -33,5 +29,13 @@ install:
 	go install
 
 .PHONY: release
-install:
+rellease:
 	goreleaser release
+
+.PHONY: build-image
+build-image:
+	docker build -t mpppk/messagen .
+
+.PHONY: run-image-with-pokemon
+run-image-with-pokemon:
+	docker run -v ./examples/iroha/pokemon.yaml:/messagen.yaml -it mpppk/messagen
