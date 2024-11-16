@@ -17,8 +17,7 @@ jobs:
       with:
         go-version: 'stable'
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
     - name: Lint
       run: make lint
@@ -33,5 +32,6 @@ jobs:
     name: Build Docker image
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - run: make build-image
       - run: make run-image-with-pokemon
