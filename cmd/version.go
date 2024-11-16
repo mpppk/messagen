@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	"github.com/mpppk/messagen/internal/selfupdate"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
+
+const version = "0.0.2"
 
 func newVersionCmd(fs afero.Fs) (*cobra.Command, error) {
 	cmd := &cobra.Command{
@@ -12,7 +13,7 @@ func newVersionCmd(fs afero.Fs) (*cobra.Command, error) {
 		Short: "Show version",
 		//Long: ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Println(selfupdate.Version)
+			cmd.Println(version)
 		},
 	}
 	return cmd, nil
