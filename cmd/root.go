@@ -47,6 +47,7 @@ func Execute() {
 	if err != nil {
 		panic(err)
 	}
+	rootCmd.SetOut(os.Stdout)
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
