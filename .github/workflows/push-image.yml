@@ -24,4 +24,4 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: mpppk/messagen:latest
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/messagen:latest
