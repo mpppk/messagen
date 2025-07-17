@@ -7,7 +7,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.6
+	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.19.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 	gopkg.in/yaml.v3 v3.0.1
